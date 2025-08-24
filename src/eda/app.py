@@ -14,10 +14,28 @@ import polars.selectors as cs
 import streamlit as st
 
 
-df = pl.read_parquet("data/diabetic_data.parquet")
-for s in df:
-    if s.is_null().any():
-        df = df.with_columns(pl.col(s.name).fill_null("None"))
+@st.cache_data
+def read_data(source: str="data/diabetic_data.parquet") -> pl.DataFrame:
+    return pl.read_parquet(source)
+
+
+@st.cache_data
+def collect_dtypes(df: pl.DataFrame) -> dict[str, str]:
+    dtypes = {}
+    for s in df:
+        dtype = str(type(s.dtype))
+        dtypes[dtype] = dtypes.get(dtype, []) + [s.name]
+    return dtypes
+
+
+@st.cache_data
+def get_num_descs(df: pl.DataFrame) -> pl.DataFrame:
+    return df.select(cs.numeric()).describe()
+
+
+# ---
+
+df = read_data()
 
 
 st.title("Diabetes dataset dashboard")
@@ -29,10 +47,7 @@ with col1:
 with col2:
     st.metric("Number of columns:", ncol)
 
-dtypes = {}
-for s in df:
-    dtype = str(type(s.dtype))
-    dtypes[dtype] = dtypes.get(dtype, []) + [s.name]
+dtypes = collect_dtypes(df)
 # st.write(dtypes)
 
 
@@ -43,19 +58,23 @@ for s in df:
 
 st.write("---")
 st.write("## Bar chart for enums")
+st.write("> Try not to use multiselect, might get rather laggy...")
 
-selections = st.multiselect("Select enum variable:", dtypes["Enum"])
-if selections:
-    for selection in selections:
-        vc = df[selection].value_counts().sort(selection)
-        vc = vc.drop_nulls()
-        chart = alt.Chart(vc).mark_bar().encode(
-            x=alt.X(f"{selection}:O", sort=vc[selection].to_list()),
-            y="count:Q"
-        ).properties(
-            title=selection
-        )
-        st.altair_chart(chart, use_container_width=True)
+col1, col2 = st.columns(2)
+with col1:
+    selection = st.selectbox("Select enum variable:", dtypes["Enum"])
+with col2:
+    groupby_var = st.selectbox("Select group by variable:", dtypes["Enum"][-1:] + dtypes["Enum"][:-1])
+if selection:
+    df2 = df.group_by(selection, groupby_var).agg(count=pl.len()).sort(selection, groupby_var).drop_nulls()
+    chart = alt.Chart(df2).mark_bar().encode(
+        x=alt.X(f"{selection}:O", sort=df2[selection]),
+        y="count:Q",
+        color=f"{groupby_var}:O",
+    ).properties(
+        title=selection
+    )
+    st.altair_chart(chart, use_container_width=True)
 
 
 st.write("---")
@@ -63,21 +82,21 @@ st.write("## Hist for numeric")
 st.write("All numeric columns are integers, scatterplots might not be pretty.")
 st.write("Decide after looking at histograms.")
 
-selections = st.multiselect("Select numeric variable:", dtypes["Int64"])
-descs = df[dtypes["Int64"]].describe()
-# st.write(descs)
-if selections:
-    for selection in selections:
-        chart = alt.Chart(df).mark_bar().encode(
-            x=alt.X(f"{selection}:Q", bin=True),
-            y="count()",
-        ).properties(
-            title=selection
-        )
-        st.altair_chart(chart, use_container_width=True)
-        d2 = pl.DataFrame(dict(zip(descs["statistic"], descs[selection])))
-        st.dataframe(d2, use_container_width=True)
-        # st.dataframe(d2)
+# selections = st.multiselect("Select numeric variable:", dtypes["Int64"])
+selection = st.selectbox("Select numeric variable:", dtypes["Int64"])
+num_descs = get_num_descs(df)
+# st.write(num_descs)
+if selection:
+    chart = alt.Chart(df).mark_bar().encode(
+        x=alt.X(f"{selection}:Q", bin=True),
+        y="count()",
+    ).properties(
+        title=selection
+    )
+    st.altair_chart(chart, use_container_width=True)
+    d2 = pl.DataFrame(dict(zip(num_descs["statistic"], num_descs[selection])))
+    st.dataframe(d2)
+    # st.dataframe(d2)
 
 
 
