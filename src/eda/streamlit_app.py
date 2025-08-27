@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# app.py
+# streamlit_app.py
 # 2025-08-24
 # Roscoe
 
@@ -105,12 +105,20 @@ st.write("## Special investigations")
 
 st.write("### `patient_nbr`s are not unique")
 
+st.write("Raw data's unit of measurement is records of admissions. If we want our unit of measurement to be records of patients, it will be quite a different dataset.")
+
 s = df["patient_nbr"]
-vc = s.filter(s.is_duplicated()).value_counts()
+vc = s.filter(s.is_duplicated()).value_counts(sort=True)
 encounters = vc["count"].rename("encounters").value_counts(sort=True)
 # st.write(encounters)
 st.bar_chart(encounters, x="encounters", y="count")
 
+
+st.write("### Perhaps explore our most VIP customer?")
+
+st.dataframe(vc)
+df2 = df.filter(pl.col("patient_nbr").eq(str(vc[0, 0])))
+st.dataframe(df2)
 
 
 
