@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # etl.py
-# 2025-08-24
+# 2025-08-27
 # Roscoe
 
 """
@@ -15,11 +15,11 @@ import os
 import stat
 
 import polars as pl
-import polars.selectors as cs
 
 
 DF_SOURCE: str = "data/raw/diabetic_data.csv"
 DD_SOURCE: str = "data/diabetes_datadict.csv"
+IDS_MAPPING_SOURCE: str = "data/IDS_mapping.json"
 DEST: str = "data/diabetic_data.parquet"
 
 
@@ -30,7 +30,7 @@ def read_raw(
     """
     Use this function if reading from raw.
     """
-    df = pl.read_csv(df_source, null_values="?", infer_schema=False)
+    df = pl.read_csv(df_source, null_values=["?", "None"], infer_schema=False)
     dd = pl.read_csv(dd_source)
 
     exprs = []
@@ -48,15 +48,24 @@ def read_raw(
     return df
 
 
-def drop_constant_columns(
+def replace_ids(
     df: pl.DataFrame,
-    verbose: bool=True
+    ids_mapping_source: str=IDS_MAPPING_SOURCE
 ) -> pl.DataFrame:
-    const_cols = [s.name for s in df if s.n_unique() <= 1]
-    if verbose:
-        print(f"Dropping constant columns: {const_cols}")
-    df = df.drop(const_cols)
+    """
+    To decide when is the best time to make the substitution, if at all.
+    """
+    with open(ids_mapping_source) as f:
+        ids_mapping = json.load(f)
+    for name, mapping in ids_mapping.items():
+        df = df.with_columns(pl.col(name).replace(mapping))
     return df
+
+
+def drop_constant_columns(df: pl.DataFrame) -> pl.DataFrame:
+    const_cols = [s.name for s in df if s.n_unique() <= 1]
+    print(f"Dropping constant columns: {const_cols}")
+    return df.drop(const_cols)
 
 
 def make_parquet(
@@ -80,7 +89,8 @@ def make_parquet(
 
 def main() -> None:
     df = read_raw()
-    df = drop_constant_columns(df, verbose=True)
+    df = replace_ids(df)
+    df = drop_constant_columns(df)
     make_parquet(df, verbose=True)
 
 

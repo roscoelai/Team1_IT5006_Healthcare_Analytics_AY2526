@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # make_datadict.py
-# 2025-08-24
+# 2025-08-27
 # Roscoe
 
 """
@@ -32,7 +32,8 @@ DEST: str = "data/diabetes_datadict.csv"
 
 def define_categories() -> dict[str, str]:
     """
-    Group into categories. This might be useful.
+    Group variables into categories, based on the project brief.
+    This might be useful.
     """
     categories = {
         "encounter_id": "Identifiers",
@@ -91,9 +92,10 @@ def define_categories() -> dict[str, str]:
 
 def define_schema(df: pl.DataFrame) -> pl.DataFrame:
     """
-    The default data type will be strings, to be treated as normative measures.
-    Specify which variables should be considered numeric and which should be
-    considered ordinal.
+    The default data type will be strings, to be treated as normative
+    categorical variables. Specify which variables should be considered
+    numeric (there are only integers in the raw dataset) and which should be
+    considered ordinal and cast to Enums.
     """
     categories = define_categories()
 
@@ -106,12 +108,10 @@ def define_schema(df: pl.DataFrame) -> pl.DataFrame:
     enums = {
         "age": ["[0-10)", "[10-20)", "[20-30)", "[30-40)", "[40-50)",
                 "[50-60)", "[60-70)", "[70-80)", "[80-90)", "[90-100)"],
-        # "weight": ["[0-25)", "[25-50)", "[50-75)", "[75-100)", "[100-125)",
-        #            "[125-150)", "[150-175)", "[175-200)", ">200", "?"],
         "weight": ["[0-25)", "[25-50)", "[50-75)", "[75-100)", "[100-125)",
                    "[125-150)", "[150-175)", "[175-200)", ">200"],
-        "max_glu_serum": ["None", "Norm", ">200", ">300"],
-        "A1Cresult": ["None", "Norm", ">7", ">8"],
+        "max_glu_serum": ["Norm", ">200", ">300"],
+        "A1Cresult": ["Norm", ">7", ">8"],
         "metformin": medication_categories,
         "repaglinide": medication_categories,
         "nateglinide": medication_categories,
@@ -202,7 +202,7 @@ def make_and_write_datadict(
     readonly: bool=True,
     verbose: bool=False
 ) -> None:
-    df = (pl.read_csv(SOURCE, null_values="?", infer_schema=False)
+    df = (pl.read_csv(SOURCE, null_values=["?", "None"], infer_schema=False)
           .pipe(define_schema)
           .pipe(replace_ids, ids_mapping_source=ids_mapping_source))
     dd = make_datadict(df, descriptions_source=descriptions_source)
