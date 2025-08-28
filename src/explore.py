@@ -1,13 +1,20 @@
 #!/usr/bin/env python
 # explore.py
-# 2025-08-26
+# 2025-08-28
 # Roscoe
+
+"""
+Have at it.
+"""
 
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import polars as pl
 import polars.selectors as cs
+import seaborn as sns
 from scipy.stats import chi2_contingency, spearmanr
 
 
@@ -29,8 +36,7 @@ def read_data(source: str=SOURCE) -> pl.DataFrame:
 def calc_n_admissions(df: pl.DataFrame) -> pl.DataFrame:
     """
     Count number of encounters for each `patient_nbr`.
-
-    If there is to be splitting, this should be run separately after splitting.
+    Run separately if splitting.
     """
     vc = df["patient_nbr"].value_counts().rename({"count": "n_admissions"})
     df = df.drop("n_admissions", strict=False)
@@ -40,15 +46,63 @@ def calc_n_admissions(df: pl.DataFrame) -> pl.DataFrame:
     return df
 
 
+def calc_spearmanr(df: pl.DataFrame) -> dict[str, pl.DataFrame]:
+    """
+    Spearman rank-order correlation coefficient.
+    """
+    arr = df.to_numpy()
+    corr = spearmanr(arr)
+    r = pl.DataFrame(corr.statistic).fill_nan(None)
+    p = pl.DataFrame(corr.pvalue).fill_nan(None)
+    r.columns = df.columns
+    p.columns = df.columns
+    if True:
+        cols = [s.name for s in r if s.is_not_null().any()]
+        rows = pl.any_horizontal(pl.all().is_not_null())
+        r = r.select(cols).filter(rows)
+        p = p.select(cols).filter(rows)
+    return {"statistic": r, "pvalue": p}
+
+
+def mask(df: pl.DataFrame, threshold: float) -> pl.DataFrame:
+    """
+    Change values below an absolute threshold to null.
+    """
+    for s in df:
+        df = df.with_columns(pl.when(pl.col(s.name).abs().lt(threshold))
+                             .then(pl.lit(None))
+                             .otherwise(s.name)
+                             .name.keep())
+    return df
+
+
+def viz_heatmap(
+    df: pl.DataFrame,
+    title: str,
+    figpath: str | None=None,
+    figsize: tuple[float, float]=(14, 12),
+    annot: bool=True,
+    fmt: str=".2g"
+) -> plt.Axes:
+    df = df.to_pandas()
+    df.set_index(df.columns, inplace=True)
+    fig, ax = plt.subplots(figsize=figsize)
+    sns.heatmap(df, cmap="viridis", annot=True, fmt=fmt, ax=ax)
+    ax.set_title(title)
+    if figpath is not None:
+        plt.savefig(figpath, dpi=300, bbox_inches="tight")
+    plt.close()
+
+# ---
+
 def corr_numerics(df: pl.DataFrame, threshold: float=0.2) -> None:
-    corr = df.select(cs.numeric()).corr()
-    for s in corr:
-        corr = corr.with_columns(pl.when(pl.col(s.name).abs().lt(threshold))
-                                 .then(pl.lit(None))
-                                 .otherwise(s.name)
-                                 .name.keep())
+    corr = df.select(cs.numeric(), pl.col("readmitted").cast(int)).corr()
+    viz_heatmap(corr,
+                title="Numeric variable correlations (Pearson, WARNING: `readmitted` treated as integers)",
+                figpath="figs/pearson-numeric-only.png")
+    corr2 = mask(corr, threshold=threshold)
     with pl.Config(tbl_cols=9) as cfg:
-        print(corr)
+        print(corr2)
 
 
 def corr_enums(df: pl.DataFrame, threshold: float=0.1) -> None:
@@ -57,22 +111,16 @@ def corr_enums(df: pl.DataFrame, threshold: float=0.1) -> None:
     The rest don't look so interesting at the moment.
     Wait, variable contains "None", which might be another problem...
     """
-    enums = df.select(cs.enum().to_physical())
-    arr = enums.to_numpy()
-    scorr = spearmanr(arr)
-    # scorr = pl.DataFrame(scorr.pvalue).fill_nan(None)
-    scorr = pl.DataFrame(scorr.statistic).fill_nan(None)
-    scorr.columns = enums.columns
-    scorr = scorr.select(s.name for s in scorr if not s.is_null().all())
-    scorr = scorr.filter(pl.any_horizontal(pl.all().is_not_null()))
-    for s in scorr:
-        # scorr = scorr.with_columns(pl.when(pl.col(s.name).abs().ge(threshold))
-        scorr = scorr.with_columns(pl.when(pl.col(s.name).abs().lt(threshold))
-                                   .then(pl.lit(None))
-                                   .otherwise(s.name)
-                                   .name.keep())
+    enum_vals = df.select(cs.enum().to_physical())
+    scorr = calc_spearmanr(enum_vals)["statistic"]
+    viz_heatmap(scorr,
+                title="Ordinal variable correlations (Spearman)",
+                figpath="figs/spearman-ordinal-only.png",
+                figsize=(16, 12),
+                fmt=".2f")
+    scorr2 = mask(scorr, threshold=threshold)
     with pl.Config(tbl_cols=26, tbl_rows=26) as cfg:
-        print(scorr)
+        print(scorr2)
 
 
 def cramers_corrected_stat(confusion_matrix) -> float:
@@ -81,7 +129,6 @@ def cramers_corrected_stat(confusion_matrix) -> float:
     Uses correction from Bergsma and Wicher,
     Journal of the Korean Statistical Society 42 (2013): 323-328
     """
-    # chi2 = chi2_contingency(confusion_matrix)[0]
     chi2 = chi2_contingency(confusion_matrix).statistic
     n = confusion_matrix.sum()
     phi2 = chi2/n
@@ -93,7 +140,7 @@ def cramers_corrected_stat(confusion_matrix) -> float:
 
 
 def cramers_v_pairwise(df: pl.DataFrame, threshold: float=0.2) -> None:
-    noms = df.select(cs.string())
+    noms = df.select(cs.string(), "readmitted")
     noms = noms.select(pl.exclude("encounter_id", "patient_nbr"))
     df2 = noms
 
@@ -114,14 +161,12 @@ def cramers_v_pairwise(df: pl.DataFrame, threshold: float=0.2) -> None:
             arr[j, i] = cramersv
     df2 = pl.DataFrame(arr)
     df2.columns = names
-    for s in df2:
-        df2 = df2.with_columns(pl.when(pl.col(s.name).abs().lt(threshold))
-                               .then(pl.lit(None))
-                               .otherwise(s.name)
-                               .name.keep())
+    viz_heatmap(df2,
+                title="Nominal variable Cramer's V",
+                figpath="figs/cramersv-nominal-only.png")
+    df3 = mask(df2, threshold=threshold)
     with pl.Config(tbl_cols=12, tbl_rows=12) as cfg:
-        print(df2)
-    return df2
+        print(df3)
 
 
 
@@ -130,8 +175,8 @@ def main() -> None:
     df = read_data()
     df = calc_n_admissions(df)
     # print(df)
-    # corr_numerics(df)
-    # corr_enums(df)
+    corr_numerics(df)
+    corr_enums(df)
     cramers_v_pairwise(df)
 
 
