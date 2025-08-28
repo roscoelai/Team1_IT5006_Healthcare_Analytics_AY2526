@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # etl.py
-# 2025-08-27
+# 2025-08-28
 # Roscoe
 
 """
@@ -16,56 +16,38 @@ import stat
 
 import polars as pl
 
+import datadict
+
 
 DF_SOURCE: str = "data/raw/diabetic_data.csv"
 DD_SOURCE: str = "data/diabetes_datadict.csv"
-IDS_MAPPING_SOURCE: str = "data/IDS_mapping.json"
 DEST: str = "data/diabetic_data.parquet"
 
 
-def read_raw(
-    df_source: str=DF_SOURCE,
-    dd_source: str=DD_SOURCE
-) -> pl.DataFrame:
-    """
-    Use this function if reading from raw.
-    """
-    df = pl.read_csv(df_source, null_values=["?", "None"], infer_schema=False)
-    dd = pl.read_csv(dd_source)
+def read_raw(df_src: str=DF_SOURCE, dd_src: str=DD_SOURCE) -> pl.DataFrame:
+    df = pl.read_csv(df_src, infer_schema=False)
+    if not os.path.isfile(dd_src):
+        datadict.make_and_write_datadict(df_src, dd_src, verbose=True)
+    dd = pl.read_csv(dd_src)
 
     exprs = []
     for row in dd.iter_rows(named=True):
         name = row["Variable"]
-        if row["Dtype"] == "Enum":
+        dtype = row["Dtype"]
+        if dtype == "Enum":
             dct = json.loads(row["ValueCounts"])
             exprs.append(pl.col(name).cast(pl.Enum(dct.keys())))
-        elif row["Dtype"] == "Int64":
-            exprs.append(pl.col(name).cast(pl.Int64))
-        elif row["Dtype"] != "String":
+        elif dtype == "Int64":
+            exprs.append(pl.col(name).cast(int))
+        elif dtype == "String":
             pass
+        # elif dtype == "Categorical":
+        #     exprs.append(pl.col(name).cast(pl.Categorical))
+        else:
+            print(f"WARNING: Unexpected dtype '{dtype}' for '{name}'.")
     df = df.with_columns(exprs)
 
     return df
-
-
-def replace_ids(
-    df: pl.DataFrame,
-    ids_mapping_source: str=IDS_MAPPING_SOURCE
-) -> pl.DataFrame:
-    """
-    To decide when is the best time to make the substitution, if at all.
-    """
-    with open(ids_mapping_source) as f:
-        ids_mapping = json.load(f)
-    for name, mapping in ids_mapping.items():
-        df = df.with_columns(pl.col(name).replace(mapping))
-    return df
-
-
-def drop_constant_columns(df: pl.DataFrame) -> pl.DataFrame:
-    const_cols = [s.name for s in df if s.n_unique() <= 1]
-    print(f"Dropping constant columns: {const_cols}")
-    return df.drop(const_cols)
 
 
 def make_parquet(
@@ -89,8 +71,7 @@ def make_parquet(
 
 def main() -> None:
     df = read_raw()
-    df = replace_ids(df)
-    df = drop_constant_columns(df)
+    df = datadict.replace_ids(df)
     make_parquet(df, verbose=True)
 
 
