@@ -5,8 +5,7 @@
 
 """
 `IDS_mapping.csv` is not in the best format for its purpose. Convert it from
-CSV to JSON. We might end up not using this information anyway, but who knows
-we might find something interesting?
+CSV to JSON.
 """
 
 import csv
