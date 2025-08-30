@@ -1,0 +1,2 @@
+# Dependency file for streamlit cloud deployment
+streamlit>=1.45.0
