@@ -10,73 +10,153 @@ Create a data dictionary for the dataset.
 import json
 import os
 import stat
+from enum import Enum
 
 import polars as pl
 
 
-SOURCE: str = "data/raw/diabetic_data.csv"
+SOURCE: str = "data/diabetic_data.csv"
 DEST: str = "data/diabetes_datadict.csv"
 
-# ---
 
-VARIABLE_CATEGORIES: dict[str, str] = {
-    "encounter_id": "Identifiers",
-    "patient_nbr": "Identifiers",
-    "race": "Demographics",
-    "gender": "Demographics",
-    "age": "Demographics",
-    "weight": "Demographics",
-    "admission_type_id": "Admission Details",
-    "discharge_disposition_id": "Admission Details",
-    "admission_source_id": "Admission Details",
-    "time_in_hospital": "Admission Details",
-    "payer_code": "Healthcare Provider",
-    "medical_specialty": "Healthcare Provider",
-    "num_lab_procedures": "Clinical Metrics",
-    "num_procedures": "Clinical Metrics",
-    "num_medications": "Clinical Metrics",
-    "number_outpatient": "Clinical Metrics",
-    "number_emergency": "Clinical Metrics",
-    "number_inpatient": "Clinical Metrics",
-    "diag_1": "Diagnoses",
-    "diag_2": "Diagnoses",
-    "diag_3": "Diagnoses",
-    "number_diagnoses": "Clinical Metrics",
-    "max_glu_serum": "Laboratory Results",
-    "A1Cresult": "Laboratory Results",
-    "metformin": "Medications",
-    "repaglinide": "Medications",
-    "nateglinide": "Medications",
-    "chlorpropamide": "Medications",
-    "glimepiride": "Medications",
-    "acetohexamide": "Medications",
-    "glipizide": "Medications",
-    "glyburide": "Medications",
-    "tolbutamide": "Medications",
-    "pioglitazone": "Medications",
-    "rosiglitazone": "Medications",
-    "acarbose": "Medications",
-    "miglitol": "Medications",
-    "troglitazone": "Medications",
-    "tolazamide": "Medications",
-    "examide": "Medications",
-    "citoglipton": "Medications",
-    "insulin": "Medications",
-    "glyburide-metformin": "Medications",
-    "glipizide-metformin": "Medications",
-    "glimepiride-pioglitazone": "Medications",
-    "metformin-rosiglitazone": "Medications",
-    "metformin-pioglitazone": "Medications",
-    "change": "Treatment Changes",
-    "diabetesMed": "Treatment Changes",
-    "readmitted": "Target Variables",
+class FeatureType(str, Enum):
+    IDENTIFIER = "Identifier"
+    TEXT = "Text"
+    CONTINUOUS = "Continuous"
+    DISCRETE = "Discrete"
+    NOMINAL = "Nominal"
+    ORDINAL = "Ordinal"
+    DATETIME = "Datetime"
+    BOOLEAN = "Boolean"
+
+
+class Categories(str, Enum):
+    IDENTIFIERS = "Identifiers"
+    DEMOGRAPHICS = "Demographics"
+    ADMISSION_DETAILS = "Admission Details"
+    HEALTHCARE_PROVIDER = "Healthcare Provider"
+    CLINICAL_METRICS = "Clinical Metrics"
+    DIAGNOSES = "Diagnoses"
+    LABORATORY_RESULTS = "Laboratory Results"
+    MEDICATIONS = "Medications"
+    TREATMENT_CHANGES = "Treatment Changes"
+    TARGET_VARIABLES = "Target Variables"
+
+
+# ---
+FEATURE_TYPES = {
+    "encounter_id": FeatureType.IDENTIFIER,
+    "patient_nbr": FeatureType.IDENTIFIER,
+    "race": FeatureType.NOMINAL,
+    "gender": FeatureType.NOMINAL,
+    "age": FeatureType.ORDINAL,
+    "weight": FeatureType.ORDINAL,
+    "admission_type_id": FeatureType.NOMINAL,
+    "discharge_disposition_id": FeatureType.IDENTIFIER,
+    "admission_source_id": FeatureType.IDENTIFIER,
+    "time_in_hospital": FeatureType.DISCRETE,
+    "payer_code": FeatureType.NOMINAL,
+    "medical_specialty": FeatureType.NOMINAL,
+    "num_lab_procedures": FeatureType.DISCRETE,
+    "num_procedures": FeatureType.DISCRETE,
+    "num_medications": FeatureType.DISCRETE,
+    "number_outpatient": FeatureType.DISCRETE,
+    "number_emergency": FeatureType.DISCRETE,
+    "number_inpatient": FeatureType.DISCRETE,
+    "diag_1": FeatureType.NOMINAL,
+    "diag_2": FeatureType.NOMINAL,
+    "diag_3": FeatureType.NOMINAL,
+    "number_diagnoses": FeatureType.DISCRETE,
+    "max_glu_serum": FeatureType.NOMINAL,
+    "A1Cresult": FeatureType.NOMINAL,
+    "metformin": FeatureType.NOMINAL,
+    "repaglinide": FeatureType.NOMINAL,
+    "nateglinide": FeatureType.NOMINAL,
+    "chlorpropamide": FeatureType.NOMINAL,
+    "glimepiride": FeatureType.NOMINAL,
+    "acetohexamide": FeatureType.NOMINAL,
+    "glipizide": FeatureType.NOMINAL,
+    "glyburide": FeatureType.NOMINAL,
+    "tolbutamide": FeatureType.NOMINAL,
+    "pioglitazone": FeatureType.NOMINAL,
+    "rosiglitazone": FeatureType.NOMINAL,
+    "acarbose": FeatureType.NOMINAL,
+    "miglitol": FeatureType.NOMINAL,
+    "troglitazone": FeatureType.NOMINAL,
+    "tolazamide": FeatureType.NOMINAL,
+    "examide": FeatureType.NOMINAL,
+    "citoglipton": FeatureType.NOMINAL,
+    "insulin": FeatureType.NOMINAL,
+    "glyburide-metformin": FeatureType.NOMINAL,
+    "glipizide-metformin": FeatureType.NOMINAL,
+    "glimepiride-pioglitazone": FeatureType.NOMINAL,
+    "metformin-rosiglitazone": FeatureType.NOMINAL,
+    "metformin-pioglitazone": FeatureType.NOMINAL,
+    "change": FeatureType.BOOLEAN,
+    "diabetesMed": FeatureType.BOOLEAN,
+    "readmitted": FeatureType.NOMINAL,
 }
 
-_RX_DESC: str = ("The feature indicates whether the drug was prescribed or "
-                 "there was a change in the dosage. Values: up if the dosage "
-                 "was increased during the encounter, down if the dosage was "
-                 "decreased, steady if the dosage did not change, and no if "
-                 "the drug was not prescribed")
+VARIABLE_CATEGORIES: dict[str, str] = {
+    "encounter_id": Categories.IDENTIFIERS,
+    "patient_nbr": Categories.IDENTIFIERS,
+    "race": Categories.DEMOGRAPHICS,
+    "gender": Categories.DEMOGRAPHICS,
+    "age": Categories.DEMOGRAPHICS,
+    "weight": Categories.DEMOGRAPHICS,
+    "admission_type_id": Categories.ADMISSION_DETAILS,
+    "discharge_disposition_id": Categories.ADMISSION_DETAILS,
+    "admission_source_id": Categories.ADMISSION_DETAILS,
+    "time_in_hospital": Categories.ADMISSION_DETAILS,
+    "payer_code": Categories.HEALTHCARE_PROVIDER,
+    "medical_specialty": Categories.HEALTHCARE_PROVIDER,
+    "num_lab_procedures": Categories.CLINICAL_METRICS,
+    "num_procedures": Categories.CLINICAL_METRICS,
+    "num_medications": Categories.CLINICAL_METRICS,
+    "number_outpatient": Categories.CLINICAL_METRICS,
+    "number_emergency": Categories.CLINICAL_METRICS,
+    "number_inpatient": Categories.CLINICAL_METRICS,
+    "diag_1": Categories.DIAGNOSES,
+    "diag_2": Categories.DIAGNOSES,
+    "diag_3": Categories.DIAGNOSES,
+    "number_diagnoses": Categories.CLINICAL_METRICS,
+    "max_glu_serum": Categories.LABORATORY_RESULTS,
+    "A1Cresult": Categories.LABORATORY_RESULTS,
+    "metformin": Categories.MEDICATIONS,
+    "repaglinide": Categories.MEDICATIONS,
+    "nateglinide": Categories.MEDICATIONS,
+    "chlorpropamide": Categories.MEDICATIONS,
+    "glimepiride": Categories.MEDICATIONS,
+    "acetohexamide": Categories.MEDICATIONS,
+    "glipizide": Categories.MEDICATIONS,
+    "glyburide": Categories.MEDICATIONS,
+    "tolbutamide": Categories.MEDICATIONS,
+    "pioglitazone": Categories.MEDICATIONS,
+    "rosiglitazone": Categories.MEDICATIONS,
+    "acarbose": Categories.MEDICATIONS,
+    "miglitol": Categories.MEDICATIONS,
+    "troglitazone": Categories.MEDICATIONS,
+    "tolazamide": Categories.MEDICATIONS,
+    "examide": Categories.MEDICATIONS,
+    "citoglipton": Categories.MEDICATIONS,
+    "insulin": Categories.MEDICATIONS,
+    "glyburide-metformin": Categories.MEDICATIONS,
+    "glipizide-metformin": Categories.MEDICATIONS,
+    "glimepiride-pioglitazone": Categories.MEDICATIONS,
+    "metformin-rosiglitazone": Categories.MEDICATIONS,
+    "metformin-pioglitazone": Categories.MEDICATIONS,
+    "change": Categories.TREATMENT_CHANGES,
+    "diabetesMed": Categories.TREATMENT_CHANGES,
+    "readmitted": Categories.TARGET_VARIABLES,
+}
+
+_RX_DESC: str = (
+    "The feature indicates whether the drug was prescribed or "
+    "there was a change in the dosage. Values: up if the dosage "
+    "was increased during the encounter, down if the dosage was "
+    "decreased, steady if the dosage did not change, and no if "
+    "the drug was not prescribed"
+)
 
 DESCRIPTIONS: dict[str, str] = {
     "encounter_id": "Unique identifier of an encounter",
@@ -85,49 +165,76 @@ DESCRIPTIONS: dict[str, str] = {
     "gender": "Values: male, female, and unknown/invalid",
     "age": "Grouped in 10-year intervals: [0, 10), [10, 20),..., [90, 100)",
     "weight": "Weight in pounds.",
-    "admission_type_id": ("Integer identifier corresponding to 9 distinct "
-                          "values, for example, emergency, urgent, elective, "
-                          "newborn, and not available"),
-    "discharge_disposition_id": ("Integer identifier corresponding to 29 "
-                                 "distinct values, for example, discharged "
-                                 "to home, expired, and not available"),
-    "admission_source_id": ("Integer identifier corresponding to 21 distinct "
-                            "values, for example, physician referral, "
-                            "emergency room, and transfer from a hospital"),
-    "time_in_hospital": ("Integer number of days between admission and "
-                         "discharge"),
-    "payer_code": ("Integer identifier corresponding to 23 distinct values, "
-                   "for example, Blue Cross/Blue Shield, Medicare, and "
-                   "self-pay"),
-    "medical_specialty": ("Integer identifier of a specialty of the admitting "
-                          "physician, corresponding to 84 distinct values, "
-                          "for example, cardiology, internal medicine, "
-                          "family/general practice, and surgeon"),
+    "admission_type_id": (
+        "Integer identifier corresponding to 9 distinct "
+        "values, for example, emergency, urgent, elective, "
+        "newborn, and not available"
+    ),
+    "discharge_disposition_id": (
+        "Integer identifier corresponding to 29 "
+        "distinct values, for example, discharged "
+        "to home, expired, and not available"
+    ),
+    "admission_source_id": (
+        "Integer identifier corresponding to 21 distinct "
+        "values, for example, physician referral, "
+        "emergency room, and transfer from a hospital"
+    ),
+    "time_in_hospital": ("Integer number of days between admission and " "discharge"),
+    "payer_code": (
+        "Integer identifier corresponding to 23 distinct values, "
+        "for example, Blue Cross/Blue Shield, Medicare, and "
+        "self-pay"
+    ),
+    "medical_specialty": (
+        "Integer identifier of a specialty of the admitting "
+        "physician, corresponding to 84 distinct values, "
+        "for example, cardiology, internal medicine, "
+        "family/general practice, and surgeon"
+    ),
     "num_lab_procedures": "Number of lab tests performed during the encounter",
-    "num_procedures": ("Number of procedures (other than lab tests) performed "
-                       "during the encounter"),
-    "num_medications": ("Number of distinct generic names administered during "
-                        "the encounter"),
-    "number_outpatient": ("Number of outpatient visits of the patient in the "
-                          "year preceding the encounter"),
-    "number_emergency": ("Number of emergency visits of the patient in the "
-                         "year preceding the encounter"),
-    "number_inpatient": ("Number of inpatient visits of the patient in the "
-                         "year preceding the encounter"),
-    "diag_1": ("The primary diagnosis (coded as first three digits of ICD9); "
-               "848 distinct values"),
-    "diag_2": ("Secondary diagnosis (coded as first three digits of ICD9); "
-               "923 distinct values"),
-    "diag_3": ("Additional secondary diagnosis (coded as first three digits "
-               "of ICD9); 954 distinct values"),
+    "num_procedures": (
+        "Number of procedures (other than lab tests) performed " "during the encounter"
+    ),
+    "num_medications": (
+        "Number of distinct generic names administered during " "the encounter"
+    ),
+    "number_outpatient": (
+        "Number of outpatient visits of the patient in the "
+        "year preceding the encounter"
+    ),
+    "number_emergency": (
+        "Number of emergency visits of the patient in the "
+        "year preceding the encounter"
+    ),
+    "number_inpatient": (
+        "Number of inpatient visits of the patient in the "
+        "year preceding the encounter"
+    ),
+    "diag_1": (
+        "The primary diagnosis (coded as first three digits of ICD9); "
+        "848 distinct values"
+    ),
+    "diag_2": (
+        "Secondary diagnosis (coded as first three digits of ICD9); "
+        "923 distinct values"
+    ),
+    "diag_3": (
+        "Additional secondary diagnosis (coded as first three digits "
+        "of ICD9); 954 distinct values"
+    ),
     "number_diagnoses": "Number of diagnoses entered to the system",
-    "max_glu_serum": ("Indicates the range of the result or if the test was "
-                      "not taken. Values: >200, >300, normal, and none if not "
-                      "measured"),
-    "A1Cresult": ("Indicates the range of the result or if the test was not "
-                  "taken. Values: >8 if the result was greater than 8%, >7 if "
-                  "the result was greater than 7% but less than 8%, normal if "
-                  "the result was less than 7%, and none if not measured."),
+    "max_glu_serum": (
+        "Indicates the range of the result or if the test was "
+        "not taken. Values: >200, >300, normal, and none if not "
+        "measured"
+    ),
+    "A1Cresult": (
+        "Indicates the range of the result or if the test was not "
+        "taken. Values: >8 if the result was greater than 8%, >7 if "
+        "the result was greater than 7% but less than 8%, normal if "
+        "the result was less than 7%, and none if not measured."
+    ),
     "metformin": _RX_DESC,
     "repaglinide": _RX_DESC,
     "nateglinide": _RX_DESC,
@@ -151,15 +258,21 @@ DESCRIPTIONS: dict[str, str] = {
     "glimepiride-pioglitazone": _RX_DESC,
     "metformin-rosiglitazone": _RX_DESC,
     "metformin-pioglitazone": _RX_DESC,
-    "change": ("Indicates if there was a change in diabetic medications "
-               "(either dosage or generic name). Values: change and no "
-               "change"),
-    "diabetesMed": ("Indicates if there was any diabetic medication "
-                    "prescribed. Values: yes and no"),
-    "readmitted": ("Days to inpatient readmission. Values: <30 if the patient "
-                   "was readmitted in less than 30 days, >30 if the patient "
-                   "was readmitted in more than 30 days, and No for no record "
-                   "of readmission."),
+    "change": (
+        "Indicates if there was a change in diabetic medications "
+        "(either dosage or generic name). Values: change and no "
+        "change"
+    ),
+    "diabetesMed": (
+        "Indicates if there was any diabetic medication "
+        "prescribed. Values: yes and no"
+    ),
+    "readmitted": (
+        "Days to inpatient readmission. Values: <30 if the patient "
+        "was readmitted in less than 30 days, >30 if the patient "
+        "was readmitted in more than 30 days, and No for no record "
+        "of readmission."
+    ),
 }
 
 IDS_MAPPINGS: dict[str, dict[str, str]] = {
@@ -178,8 +291,9 @@ IDS_MAPPINGS: dict[str, dict[str, str]] = {
         "2": "Discharged/transferred to another short term hospital",
         "3": "Discharged/transferred to SNF",
         "4": "Discharged/transferred to ICF",
-        "5": ("Discharged/transferred to another type of inpatient care "
-              "institution"),
+        "5": (
+            "Discharged/transferred to another type of inpatient care " "institution"
+        ),
         "6": "Discharged/transferred to home with home health service",
         "7": "Left AMA",
         "8": "Discharged/transferred to home under care of Home IV provider",
@@ -189,28 +303,42 @@ IDS_MAPPINGS: dict[str, dict[str, str]] = {
         "12": "Still patient or expected to return for outpatient services",
         "13": "Hospice / home",
         "14": "Hospice / medical facility",
-        "15": ("Discharged/transferred within this institution to Medicare "
-               "approved swing bed"),
-        "16": ("Discharged/transferred/referred another institution for "
-               "outpatient services"),
-        "17": ("Discharged/transferred/referred to this institution for "
-               "outpatient services"),
+        "15": (
+            "Discharged/transferred within this institution to Medicare "
+            "approved swing bed"
+        ),
+        "16": (
+            "Discharged/transferred/referred another institution for "
+            "outpatient services"
+        ),
+        "17": (
+            "Discharged/transferred/referred to this institution for "
+            "outpatient services"
+        ),
         "18": "NULL",
         "19": "Expired at home. Medicaid only, hospice.",
         "20": "Expired in a medical facility. Medicaid only, hospice.",
         "21": "Expired, place unknown. Medicaid only, hospice.",
-        "22": ("Discharged/transferred to another rehab fac including rehab "
-               "units of a hospital."),
+        "22": (
+            "Discharged/transferred to another rehab fac including rehab "
+            "units of a hospital."
+        ),
         "23": "Discharged/transferred to a long term care hospital.",
-        "24": ("Discharged/transferred to a nursing facility certified under "
-               "Medicaid but not certified under Medicare."),
+        "24": (
+            "Discharged/transferred to a nursing facility certified under "
+            "Medicaid but not certified under Medicare."
+        ),
         "25": "Not Mapped",
         "26": "Unknown/Invalid",
-        "30": ("Discharged/transferred to another Type of Health Care "
-               "Institution not Defined Elsewhere"),
+        "30": (
+            "Discharged/transferred to another Type of Health Care "
+            "Institution not Defined Elsewhere"
+        ),
         "27": "Discharged/transferred to a federal health care facility.",
-        "28": ("Discharged/transferred/referred to a psychiatric hospital of "
-               "psychiatric distinct part unit of a hospital"),
+        "28": (
+            "Discharged/transferred/referred to a psychiatric hospital of "
+            "psychiatric distinct part unit of a hospital"
+        ),
         "29": "Discharged/transferred to a Critical Access Hospital (CAH).",
     },
     "admission_source_id": {
@@ -239,16 +367,19 @@ IDS_MAPPINGS: dict[str, dict[str, str]] = {
         "24": "Born outside this hospital",
         "25": "Transfer from Ambulatory Surgery Center",
         "26": "Transfer from Hospice",
-    }
+    },
 }
 
 
 def make_skeleton() -> pl.DataFrame:
-    dd = pl.DataFrame({
-        "Variable": DESCRIPTIONS.keys(),
-        "Category": [VARIABLE_CATEGORIES[k] for k in DESCRIPTIONS],
-        "Description": DESCRIPTIONS.values(),
-    })
+    dd = pl.DataFrame(
+        {
+            "variable": DESCRIPTIONS.keys(),
+            "category": [VARIABLE_CATEGORIES[k] for k in DESCRIPTIONS],
+            "description": DESCRIPTIONS.values(),
+            "feature_type": [FEATURE_TYPES[k] for k in DESCRIPTIONS],
+        }
+    )
     return dd
 
 
@@ -338,7 +469,7 @@ def replace_ids(df: pl.DataFrame) -> pl.DataFrame:
     return df
 
 
-def make_datadict(df: pl.DataFrame | None=None) -> pl.DataFrame:
+def make_datadict(df: pl.DataFrame | None = None) -> pl.DataFrame:
     dd = make_skeleton()
     if df is None:
         return dd
@@ -356,25 +487,22 @@ def make_datadict(df: pl.DataFrame | None=None) -> pl.DataFrame:
             vcds.append(str(vcd).replace("'", '"'))
         else:
             vcds.append(None)
-    dd2 = pl.DataFrame({
-        "Variable": df.columns,
-        "Dtype": dtypes,
-        "NUnique": n_uniques,
-        "ValueCounts": vcds,
-    })
-    dd = dd.join(dd2, on="Variable", how="left")
+    dd2 = pl.DataFrame(
+        {
+            "variable": df.columns,
+            "data_type": dtypes,
+            "value_counts": vcds,
+            "n_unique": n_uniques,
+        }
+    )
+    dd = dd.join(dd2, on="variable", how="left")
     return dd
 
 
 def make_and_write_datadict(
-    source: str=SOURCE,
-    dest: str=DEST,
-    readonly: bool=True,
-    verbose: bool=False
+    source: str = SOURCE, dest: str = DEST, readonly: bool = True, verbose: bool = False
 ) -> None:
-    df = (pl.read_csv(SOURCE, infer_schema=False)
-          .pipe(replace_ids)
-          .pipe(set_schema))
+    df = pl.read_csv(SOURCE, infer_schema=False).pipe(replace_ids).pipe(set_schema)
     dd = make_datadict(df)
     if os.path.isfile(dest):
         os.chmod(dest, stat.S_IWRITE)
@@ -388,12 +516,9 @@ def make_and_write_datadict(
         print(msg)
 
 
-
 def main() -> None:
     make_and_write_datadict(verbose=True)
 
 
 if __name__ == "__main__":
     main()
-
-
