@@ -44,6 +44,37 @@ class OverviewCard:
             st.metric(label="Number of Rows", value=f"{self.data.shape[0]:,}")
             st.metric(label="Number of Columns", value=f"{self.data.shape[1]:,}")
 
+    def _render_data_overview(self):
+        with st.container(border=True):
+            st.markdown(
+                f"""
+            **Variable Types**  
+
+            **Categorical**  
+            Nominal: {self.num_nominal}  
+            Ordinal: {self.num_ordinal}  
+            Boolean: {self.num_boolean}  
+
+            **Numerical**  
+            Continuous: {self.num_continuous}
+            Discrete: {self.num_discrete}
+
+            **Others**  
+            Identifier: {self.num_identifier}
+            """
+            )
+
+    def _render_sample_data(self, option: DataSubset):
+        match option:
+            case DataSubset.FIRST_100:
+                st.write(self.data.head(100))
+            case DataSubset.RANDOM_SAMPLE:
+                st.write(self.data.sample(100))
+            case DataSubset.ALL:
+                st.write(self.data)
+            case _:
+                st.error("Invalid option")
+
     def render(self):
 
         # Data Overview
@@ -57,28 +88,9 @@ class OverviewCard:
             )
             col1, col2 = st.columns([1, 5])
             with col2:
-                # use a container for the data subset selection
-                # select box should fit content
-
-                if option == DataSubset.FIRST_100:
-                    st.write(self.data.head(100))
-                elif option == DataSubset.RANDOM_SAMPLE:
-                    st.write(self.data.sample(100))
-                elif option == DataSubset.ALL:
-                    st.write(self.data)
+                self._render_sample_data(option)
             with col1:
-                with st.container(border=True):
-                    st.markdown(
-                        f"""
-                    Variable Types
-                    **Identifier:** {self.num_identifier}
-                    **Nominal:** {self.num_nominal}
-                    **Ordinal:** {self.num_ordinal}
-                    **Boolean:** {self.num_boolean}
-                    **Continuous:** {self.num_continuous}
-                    **Discrete:** {self.num_discrete}
-                    """
-                    )
+                self._render_data_overview()
 
             with st.expander("View Data Dictionary"):
                 st.write(self.metadata)
