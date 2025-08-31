@@ -10,11 +10,17 @@ Write to Apache Parquet format. Moving forward, either read the parquet file,
 or use the `read_raw()` function.
 """
 
+import inspect
 import json
 import os
 import stat
+import sys
 
 import polars as pl
+
+__currentfile = inspect.getframeinfo(inspect.currentframe()).filename
+__currentdir = os.path.dirname(__currentfile)
+sys.path.insert(0, __currentdir)
 
 import datadict
 
@@ -48,6 +54,7 @@ def read_raw(df_src: str=DF_SOURCE, dd_src: str=DD_SOURCE) -> pl.DataFrame:
     df = df.with_columns(exprs)
 
     return df
+
 
 
 def make_parquet(

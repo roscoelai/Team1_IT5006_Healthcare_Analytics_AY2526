@@ -7,7 +7,9 @@
 Have at it.
 """
 
+import inspect
 import os
+import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,6 +18,12 @@ import polars as pl
 import polars.selectors as cs
 import seaborn as sns
 from scipy.stats import chi2_contingency, spearmanr
+
+sys.path.append(
+    os.path.dirname(inspect.getframeinfo(inspect.currentframe()).filename)
+)
+
+from etl import datadict
 
 
 SOURCE: str = "data/diabetic_data.parquet"
@@ -170,11 +178,15 @@ def cramers_v_pairwise(df: pl.DataFrame, threshold: float=0.2) -> None:
 
 
 
-
 def main() -> None:
     df = read_data()
     df = calc_n_admissions(df)
     # print(df)
+    with pl.Config(tbl_width_chars=300, fmt_str_lengths=200, tbl_rows=19) as cfg:
+        for k in [f"diag_{i}" for i in [1, 2, 3]]:
+            print(k)
+            print(df[k].map_elements(datadict.icd9_lookup, return_dtype=str).value_counts(sort=True))
+    return
     corr_numerics(df)
     corr_enums(df)
     cramers_v_pairwise(df)

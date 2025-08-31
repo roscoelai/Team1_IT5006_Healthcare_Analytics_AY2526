@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # datadict.py
-# 2025-08-28
+# 2025-08-31
 # Roscoe
 
 """
@@ -243,6 +243,76 @@ IDS_MAPPINGS: dict[str, dict[str, str]] = {
 }
 
 
+def icd9_lookup(x: str) -> str:
+    """
+    https://en.wikipedia.org/wiki/List_of_ICD-9_codes
+
+    Will need to look more carefully at this one...
+    """
+    # These may not be interesting.
+    if x == "?":
+        return x
+    elif x.startswith("V"):
+        return "supplemental classification"
+    elif x.startswith("E"):
+        return "external causes of injury "
+
+    x_num = float(x)
+    if 1 <= x_num <= 139:
+        return "infectious and parasitic diseases"
+    elif 140 <= x_num <= 239:
+        return "neoplasms"
+
+    # Drill down into this category because diabetes is the focus.
+    # elif 240 <= x_num <= 279:
+    #     return ("endocrine, nutritional and metabolic diseases, and immunity "
+    #             "disorders")
+    elif 240 <= x_num < 247:
+        return "Disorders of thyroid gland"
+    elif 249 <= x_num < 250:
+        return "Secondary diabetes mellitus"
+    elif 250 <= x_num < 251:
+        return "Diabetes mellitus"
+    elif 251 <= x_num < 260:
+        return "Diseases of other endocrine glands"
+    # elif 249 <= x_num < 260:
+    #     return "Diseases of other endocrine glands"
+    elif 260 <= x_num < 270:
+        return "Nutritional deficiencies"
+    elif 270 <= x_num < 280:
+        return "Other metabolic and immunity disorders"
+
+    elif 280 <= x_num <= 289:
+        return "diseases of the blood and blood-forming organs"
+    elif 290 <= x_num <= 319:
+        return "mental disorders"
+    elif 320 <= x_num <= 389:
+        return "diseases of the nervous system and sense organs"
+    elif 390 <= x_num <= 459:
+        return "diseases of the circulatory system"
+    elif 460 <= x_num <= 519:
+        return "diseases of the respiratory system"
+    elif 520 <= x_num <= 579:
+        return "diseases of the digestive system"
+    elif 580 <= x_num <= 629:
+        return "diseases of the genitourinary system"
+    elif 630 <= x_num <= 679:
+        return "complications of pregnancy, childbirth, and the puerperium"
+    elif 680 <= x_num <= 709:
+        return "diseases of the skin and subcutaneous tissue"
+    elif 710 <= x_num <= 739:
+        return "diseases of the musculoskeletal system and connective tissue"
+    elif 740 <= x_num <= 759:
+        return "congenital anomalies"
+    elif 760 <= x_num <= 779:
+        return "certain conditions originating in the perinatal period"
+    elif 780 <= x_num <= 799:
+        return "symptoms, signs, and ill-defined conditions"
+    elif 800 <= x_num <= 999:
+        return "injury and poisoning"
+    return x
+
+
 def make_skeleton() -> pl.DataFrame:
     dd = pl.DataFrame({
         "Variable": DESCRIPTIONS.keys(),
@@ -331,11 +401,27 @@ def set_schema(df: pl.DataFrame) -> pl.DataFrame:
 
 def replace_ids(df: pl.DataFrame) -> pl.DataFrame:
     """
-    To decide when is the best time to make the substitution, if at all.
+    To decide when is the best time to make the substitution.
     """
     for name, mapping in IDS_MAPPINGS.items():
         df = df.with_columns(pl.col(name).replace(mapping))
     return df
+
+
+def calc_gini_impurity(s: pl.Series) -> float:
+    vc = s.value_counts(normalize=True)
+    vc = vc.with_columns(pl.col("proportion").pow(2).alias("prop2"))
+    return 1 - vc["prop2"].sum()
+
+
+def calc_entropy(s: pl.Series) -> float:
+    """
+    KIV.
+    """
+    p = pl.col("proportion")
+    vc = s.value_counts(normalize=True)
+    vc = vc.with_columns(-p.log(base=2).mul(p).alias("shannon"))
+    return vc["shannon"].sum()
 
 
 def make_datadict(df: pl.DataFrame | None=None) -> pl.DataFrame:
@@ -344,11 +430,15 @@ def make_datadict(df: pl.DataFrame | None=None) -> pl.DataFrame:
         return dd
     dtypes = []
     n_uniques = []
+    ginis = []
+    modepcts = []
     vcds = []
     for s in df:
         dtypes.append(str(type(s.dtype)))
         n_uniques.append(s.n_unique())
+        ginis.append(calc_gini_impurity(s))
         vc = s.value_counts().sort(s.name)
+        modepcts.append(vc["count"].max() / df.height)
         if vc.height <= 118:
             vcd = dict(zip(vc[s.name], vc["count"]))
             if s.dtype == pl.Enum:
@@ -360,6 +450,8 @@ def make_datadict(df: pl.DataFrame | None=None) -> pl.DataFrame:
         "Variable": df.columns,
         "Dtype": dtypes,
         "NUnique": n_uniques,
+        "GiniImpurity": ginis,
+        "ModePct": modepcts,
         "ValueCounts": vcds,
     })
     dd = dd.join(dd2, on="Variable", how="left")
