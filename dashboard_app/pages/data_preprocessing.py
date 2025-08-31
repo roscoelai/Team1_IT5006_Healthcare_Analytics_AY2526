@@ -87,6 +87,10 @@ st.markdown(
     """
 )
 
+# plot barchart of missing values
+missing_values = df.isnull().sum()
+st.bar_chart(missing_values)
+
 # ------------------------------------------------------------------------------
 # 4. Encoding of Categorical variables
 # ------------------------------------------------------------------------------
