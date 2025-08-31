@@ -1,25 +1,62 @@
+import os
+from enum import Enum
+
+import pandas as pd
 import streamlit as st
+import plotly.express as px
+
+from dashboard_app.components.categorical_card import CategoricalCard
+from dashboard_app.components.numerical_card import NumericalCard
+from dashboard_app.components.identifier_card import IdentifierCard
+from dashboard_app.components.overview_card import OverviewCard
+from dashboard_app.constants.feature_type import FeatureType
+
+
+# ---
+# TODO: move this to shared folder
+@st.cache_data
+def load_csv_data(path: str) -> pd.DataFrame:
+    return pd.read_csv(path)
+
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+data_dir = os.path.join(current_dir, "../data")
+df = load_csv_data(os.path.join(data_dir, "diabetic_data.csv"))
+metadata = load_csv_data(os.path.join(data_dir, "diabetes_datadict.csv"))
+
+# ---
 
 st.title("Data Preprocessing")
 
 # ------------------------------------------------------------------------------
 # 1. Raw Data Overview
 # ------------------------------------------------------------------------------
-st.subheader("📄 Raw Data Overview")
+st.header("Overview of Raw Data 📄")
 st.markdown(
     """
-    - <Include summary statistics here>  
-    - <Include visualisation on raw data here>
-
-    - num rows & columns  
-    - include sample rows  
-    - summary statistics  
-    - Make a note on placeholers for missing values in the raw data (e.g. "?")  
-    - Visualization on count of categorical vs numerical data  
-    - <suggest other visualisation / descriptions>  
+    <TODO: include some written summary description of the raw data>
     """
 )
+OverviewCard(df, metadata).render()
 
+# Use data dict to show all key metrics for a single variable
+selected_var = st.selectbox(
+    "Select a variable to view metrics:", metadata["variable"].tolist()
+)
+data_dict_series = metadata[metadata["variable"] == selected_var]
+feature_type = data_dict_series["feature_type"].values[0]
+
+match feature_type:
+    case FeatureType.IDENTIFIER:
+        IdentifierCard(df[selected_var], data_dict_series).render()
+    case FeatureType.DISCRETE | FeatureType.CONTINUOUS:
+        NumericalCard(df[selected_var], data_dict_series).render()
+    case FeatureType.NOMINAL | FeatureType.ORDINAL:
+        CategoricalCard(df[selected_var], data_dict_series).render()
+    case FeatureType.BOOLEAN:
+        CategoricalCard(df[selected_var], data_dict_series).render()
+    case _:
+        st.warning(f"Feature type '{feature_type}' is not supported.")
 
 # ------------------------------------------------------------------------------
 # 2. Overview of Data Preprocessing Steps
