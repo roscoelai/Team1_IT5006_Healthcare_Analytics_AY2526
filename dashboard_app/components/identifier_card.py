@@ -59,10 +59,11 @@ class IdentifierCard:
             st.markdown(
                 f"""**Feature Type:** {self.feature_type}  
             **Count:** {self.count:,}  
-            **Missing Values:** {self.missing:,}  
+            **Missing Values\*:** {self.missing:,} *({self.missing/self.count:.1%})*  
             **Unique Values:** {self.unique:,}  
             **Mode:** {self.mode}  
             **Mode Count:** {self.mode_count:,}  
-            **Duplicates:** {self.duplicates:,}
+            **Duplicates:** {self.duplicates:,}  
+            **missing values includes null values and placeholder '?'*
             """
             )

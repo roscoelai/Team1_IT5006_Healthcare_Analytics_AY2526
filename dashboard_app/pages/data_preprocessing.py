@@ -8,6 +8,9 @@ import plotly.express as px
 from dashboard_app.components.categorical_card import CategoricalCard
 from dashboard_app.components.numerical_card import NumericalCard
 from dashboard_app.components.identifier_card import IdentifierCard
+from dashboard_app.components.num_corr_card import NumericalCorrelationCard
+from dashboard_app.components.cat_corr_card import CategoricalCorrelationCard
+from dashboard_app.components.num_cat_corr_card import NumericalCategoricalCorrCard
 from dashboard_app.components.overview_card import OverviewCard
 from dashboard_app.constants.feature_type import FeatureType
 
@@ -31,15 +34,20 @@ st.title("Data Preprocessing")
 # ------------------------------------------------------------------------------
 # 1. Raw Data Overview
 # ------------------------------------------------------------------------------
-st.header("Overview of Raw Data 📄")
+st.header("📄 Overview of Raw Data")
 st.markdown(
     """
-    <TODO: include some written summary description of the raw data>
     """
 )
+st.warning("TODO: include some written summary description of the raw data")
 OverviewCard(df, metadata).render()
 
-# Use data dict to show all key metrics for a single variable
+# ------------------------------------------------------------------------------
+# Univariate Analysis
+# ------------------------------------------------------------------------------
+st.subheader("🔍 Univariate Analysis")
+st.warning("TODO: add some written summary description of univariate analysis")
+
 selected_var = st.selectbox(
     "Select a variable to view metrics:", metadata["variable"].tolist()
 )
@@ -58,6 +66,27 @@ match feature_type:
     case _:
         st.warning(f"Feature type '{feature_type}' is not supported.")
 
+
+# ------------------------------------------------------------------------------
+# Bivariate / Multivariate Analysis
+# ------------------------------------------------------------------------------
+st.subheader("🔍 Bivariate / Multivariate Analysis")
+
+tab1, tab2, tab3 = st.tabs(
+    [
+        "Numerical <-> Numerical",
+        "Categorical <-> Categorical",
+        "Numerical <-> Categorical",
+    ]
+)
+
+with tab1:
+    NumericalCorrelationCard(df, metadata).render()
+with tab2:
+    CategoricalCorrelationCard(df, metadata).render()
+with tab3:
+    NumericalCategoricalCorrCard(df, metadata).render()
+
 # ------------------------------------------------------------------------------
 # 2. Overview of Data Preprocessing Steps
 # ------------------------------------------------------------------------------
@@ -70,26 +99,64 @@ st.markdown(
     """
 )
 
+
 # ------------------------------------------------------------------------------
 # 3. Treatment of Missing Values
 # ------------------------------------------------------------------------------
 st.subheader("❓ Treatment of Missing Values ")
+has_missing = metadata[metadata["missing_values"] > 0]
+has_missing["percentage_missing"] = has_missing["missing_values"] / df.shape[0] * 100
+has_missing = has_missing.sort_values("percentage_missing", ascending=False)
+has_missing["percentage_missing"] = has_missing["percentage_missing"].map(
+    lambda x: f"{x:.2f}%"
+)
+
+# Plot missing values
+fig = px.bar(
+    has_missing,
+    x="variable",
+    y="percentage_missing",
+    title="Variables with Missing Values",
+    text=has_missing["percentage_missing"],
+    labels={"percentage_missing": "Percentage Missing"},
+)
+st.plotly_chart(fig)
+
 st.markdown(
-    """
-    - basically just mention how we handle missing values.    
-        - drop the rows with missing values?  
-        - remove entire column with too many missing values?  
-        - mean/median/mode imputation?  
-        - replace with a new category ("unknown") for categorical vals?  
-        - something more advanced? k nearest neighbour? reg models? train model to impute?
-        - need to justify strategy e.g. too many missing values? etc etc...  
-        strategy (e.g. lit review suggest average is sth?), etc etc...  
+    f"""
+    There are a total of **seven** variables in the dataset with missing values.  
+
+    - `weight` has a very high proportion of missing values 
+    **({has_missing[has_missing['variable'] == 'weight']['percentage_missing'].values[0]})**. 
+    The approach here is to **drop the column** entirely.
+    - 
     """
 )
 
-# plot barchart of missing values
-# missing_values = df.isnull().sum()
-# st.bar_chart(missing_values)
+has_missing[["strategy", "rationale"]] = ["label as 'Unknown'", ""]
+has_missing.loc[has_missing["variable"] == "weight", ["strategy", "rationale"]] = [
+    "drop",
+    "High proportion of missing values",
+]
+has_missing.loc[has_missing["variable"] == "payer_code", ["strategy", "rationale"]] = [
+    "drop",
+    "Payment method should have no impact on readmission",
+]
+
+st.dataframe(
+    # has_missing[["variable", "description", "percentage_missing", "strategy"]],
+    has_missing[
+        [
+            "variable",
+            "feature_type",
+            "description",
+            "percentage_missing",
+            "strategy",
+            "rationale",
+        ]
+    ],
+    hide_index=True,
+)
 
 # ------------------------------------------------------------------------------
 # 4. Encoding of Categorical variables

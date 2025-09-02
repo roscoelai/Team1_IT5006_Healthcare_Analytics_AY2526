@@ -6,13 +6,13 @@ from dashboard_app.constants.feature_type import FeatureType
 
 
 class CategoricalCard:
+    # TODO: for ordinal data, need to preserve order
+
     _SUPPORTED_FEATURE_TYPES = [
         FeatureType.NOMINAL,
         FeatureType.ORDINAL,
         FeatureType.BOOLEAN,
     ]
-
-    # NOTE: visualising nominal and ordinal in the same manner
 
     def __init__(self, data: pd.Series, metadata: pd.Series):
         self.data = data
@@ -64,7 +64,7 @@ class CategoricalCard:
         self.description: str = self.metadata["description"].values[0]
         self.category: str = self.metadata["category"].values[0]
         self.count: int = self.data.count()
-        self.missing: int = self.data.isnull().sum()
+        self.missing: int = self.metadata["missing_values"].values[0]
         self.unique: int = self.metadata["n_unique"].values[0]
         self.mode: str = self.data.mode().values[0]
         self.mode_count: int = self.data.value_counts().values[0]
@@ -79,10 +79,11 @@ class CategoricalCard:
             st.markdown(
                 f"""**Feature Type:** {self.feature_type}  
             **Count:** {self.count:,}  
-            **Missing Values:** {self.missing:,}  
+            **Missing Values\*:** {self.missing:,} *({self.missing/self.count:.1%})*  
             **Unique Values:** {self.unique:,}  
             **Mode:** {self.mode}  
             **Mode Count:** {self.mode_count:,}  
+            **missing values includes null values and placeholder '?'*
             """
             )
 

@@ -55,7 +55,7 @@ class NumericalCard:
         self.description = self.metadata["description"].values[0]
         self.category = self.metadata["category"].values[0]
         self.count = self.data.count()
-        self.missing = self.data.isnull().sum()
+        self.missing: int = self.metadata["missing_values"].values[0]
         self.unique = self.metadata["n_unique"].values[0]
         self.mean = self.data.mean()
         self.std_err = self.data.std()
@@ -79,7 +79,7 @@ class NumericalCard:
             st.markdown(
                 f"""**Data Type:** {self.feature_type}  
             **Count:** {self.count:,}  
-            **Missing Values:** {self.missing:,}  
+            **Missing Values\*:** {self.missing:,} *({self.missing/self.count:.1%})*  
             **Unique Values:** {self.unique:,}  
             **Mean:** {self.mean:,.2f}  
             **Standard Deviation:** {self.std_err:,.2f}  
@@ -91,6 +91,7 @@ class NumericalCard:
             **Lower Outliers:** {self.lower_outliers:,}  
             **Upper Outliers:** {self.upper_outliers:,}  
             **Total Outliers:** {self.num_outliers:,}  
+            **missing values includes null values and placeholder '?'*
             """
             )
 
@@ -210,4 +211,5 @@ class NumericalCard:
             width=800,
             height=300,
         )
+
         st.plotly_chart(fig)
