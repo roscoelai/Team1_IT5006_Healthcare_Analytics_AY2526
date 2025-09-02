@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # datadict.py
-# 2025-08-28
+# 2025-09-02
 # Roscoe
 
 """
 Create a data dictionary for the dataset.
 """
 
-import json
 import os
 import stat
 from enum import Enum
@@ -121,34 +120,34 @@ FEATURE_TYPES = {
     "diag_2": FeatureType.NOMINAL,
     "diag_3": FeatureType.NOMINAL,
     "number_diagnoses": FeatureType.DISCRETE,
-    "max_glu_serum": FeatureType.NOMINAL,
-    "A1Cresult": FeatureType.NOMINAL,
-    "metformin": FeatureType.NOMINAL,
-    "repaglinide": FeatureType.NOMINAL,
-    "nateglinide": FeatureType.NOMINAL,
-    "chlorpropamide": FeatureType.NOMINAL,
-    "glimepiride": FeatureType.NOMINAL,
-    "acetohexamide": FeatureType.NOMINAL,
-    "glipizide": FeatureType.NOMINAL,
-    "glyburide": FeatureType.NOMINAL,
-    "tolbutamide": FeatureType.NOMINAL,
-    "pioglitazone": FeatureType.NOMINAL,
-    "rosiglitazone": FeatureType.NOMINAL,
-    "acarbose": FeatureType.NOMINAL,
-    "miglitol": FeatureType.NOMINAL,
-    "troglitazone": FeatureType.NOMINAL,
-    "tolazamide": FeatureType.NOMINAL,
-    "examide": FeatureType.NOMINAL,
-    "citoglipton": FeatureType.NOMINAL,
-    "insulin": FeatureType.NOMINAL,
-    "glyburide-metformin": FeatureType.NOMINAL,
-    "glipizide-metformin": FeatureType.NOMINAL,
-    "glimepiride-pioglitazone": FeatureType.NOMINAL,
-    "metformin-rosiglitazone": FeatureType.NOMINAL,
-    "metformin-pioglitazone": FeatureType.NOMINAL,
+    "max_glu_serum": FeatureType.NOMINAL,  # Ordinal, if not for "None"
+    "A1Cresult": FeatureType.NOMINAL,  # Ordinal, if not for "None"
+    "metformin": FeatureType.ORDINAL,
+    "repaglinide": FeatureType.ORDINAL,
+    "nateglinide": FeatureType.ORDINAL,
+    "chlorpropamide": FeatureType.ORDINAL,
+    "glimepiride": FeatureType.ORDINAL,
+    "acetohexamide": FeatureType.ORDINAL,
+    "glipizide": FeatureType.ORDINAL,
+    "glyburide": FeatureType.ORDINAL,
+    "tolbutamide": FeatureType.ORDINAL,
+    "pioglitazone": FeatureType.ORDINAL,
+    "rosiglitazone": FeatureType.ORDINAL,
+    "acarbose": FeatureType.ORDINAL,
+    "miglitol": FeatureType.ORDINAL,
+    "troglitazone": FeatureType.ORDINAL,
+    "tolazamide": FeatureType.ORDINAL,
+    "examide": FeatureType.ORDINAL,
+    "citoglipton": FeatureType.ORDINAL,
+    "insulin": FeatureType.ORDINAL,
+    "glyburide-metformin": FeatureType.ORDINAL,
+    "glipizide-metformin": FeatureType.ORDINAL,
+    "glimepiride-pioglitazone": FeatureType.ORDINAL,
+    "metformin-rosiglitazone": FeatureType.ORDINAL,
+    "metformin-pioglitazone": FeatureType.ORDINAL,
     "change": FeatureType.BOOLEAN,
     "diabetesMed": FeatureType.BOOLEAN,
-    "readmitted": FeatureType.NOMINAL,
+    "readmitted": FeatureType.ORDINAL,
 }
 
 VARIABLE_CATEGORIES: dict[str, str] = {
@@ -234,7 +233,9 @@ DESCRIPTIONS: dict[str, str] = {
         "values, for example, physician referral, "
         "emergency room, and transfer from a hospital"
     ),
-    "time_in_hospital": ("Integer number of days between admission and " "discharge"),
+    "time_in_hospital": (
+        "Integer number of days between admission and discharge"
+    ),
     "payer_code": (
         "Integer identifier corresponding to 23 distinct values, "
         "for example, Blue Cross/Blue Shield, Medicare, and "
@@ -248,10 +249,11 @@ DESCRIPTIONS: dict[str, str] = {
     ),
     "num_lab_procedures": "Number of lab tests performed during the encounter",
     "num_procedures": (
-        "Number of procedures (other than lab tests) performed " "during the encounter"
+        "Number of procedures (other than lab tests) performed "
+        "during the encounter"
     ),
     "num_medications": (
-        "Number of distinct generic names administered during " "the encounter"
+        "Number of distinct generic names administered during the encounter"
     ),
     "number_outpatient": (
         "Number of outpatient visits of the patient in the "
@@ -346,7 +348,8 @@ IDS_MAPPINGS: dict[str, dict[str, str]] = {
         "3": "Discharged/transferred to SNF",
         "4": "Discharged/transferred to ICF",
         "5": (
-            "Discharged/transferred to another type of inpatient care " "institution"
+            "Discharged/transferred to another type of inpatient care "
+            "institution"
         ),
         "6": "Discharged/transferred to home with home health service",
         "7": "Left AMA",
@@ -423,6 +426,78 @@ IDS_MAPPINGS: dict[str, dict[str, str]] = {
         "26": "Transfer from Hospice",
     },
 }
+
+
+def icd9_lookup(x: str) -> str:
+    """
+    https://en.wikipedia.org/wiki/List_of_ICD-9_codes
+
+    Will need to look more carefully at this one.
+    """
+    # These may not be interesting.
+    if x == "?":
+        return x
+    elif x.startswith("V"):
+        return "supplemental classification"
+    elif x.startswith("E"):
+        return "external causes of injury "
+
+    x_num = float(x)
+    if 1 <= x_num <= 139:
+        return "infectious and parasitic diseases"
+    elif 140 <= x_num <= 239:
+        return "neoplasms"
+
+    # -------------------------------------------------------------------------
+    # Drill down into this category because diabetes is the focus.
+    # elif 240 <= x_num <= 279:
+    #     return ("endocrine, nutritional and metabolic diseases, and immunity "
+    #             "disorders")
+    elif 240 <= x_num < 247:
+        return "Disorders of thyroid gland"
+    elif 249 <= x_num < 250:
+        return "Secondary diabetes mellitus"
+    elif 250 <= x_num < 251:
+        return "Diabetes mellitus"
+    elif 251 <= x_num < 260:
+        return "Diseases of other endocrine glands"
+    # elif 249 <= x_num < 260:
+    #     return "Diseases of other endocrine glands"
+    elif 260 <= x_num < 270:
+        return "Nutritional deficiencies"
+    elif 270 <= x_num < 280:
+        return "Other metabolic and immunity disorders"
+    # -------------------------------------------------------------------------
+
+    elif 280 <= x_num <= 289:
+        return "diseases of the blood and blood-forming organs"
+    elif 290 <= x_num <= 319:
+        return "mental disorders"
+    elif 320 <= x_num <= 389:
+        return "diseases of the nervous system and sense organs"
+    elif 390 <= x_num <= 459:
+        return "diseases of the circulatory system"
+    elif 460 <= x_num <= 519:
+        return "diseases of the respiratory system"
+    elif 520 <= x_num <= 579:
+        return "diseases of the digestive system"
+    elif 580 <= x_num <= 629:
+        return "diseases of the genitourinary system"
+    elif 630 <= x_num <= 679:
+        return "complications of pregnancy, childbirth, and the puerperium"
+    elif 680 <= x_num <= 709:
+        return "diseases of the skin and subcutaneous tissue"
+    elif 710 <= x_num <= 739:
+        return "diseases of the musculoskeletal system and connective tissue"
+    elif 740 <= x_num <= 759:
+        return "congenital anomalies"
+    elif 760 <= x_num <= 779:
+        return "certain conditions originating in the perinatal period"
+    elif 780 <= x_num <= 799:
+        return "symptoms, signs, and ill-defined conditions"
+    elif 800 <= x_num <= 999:
+        return "injury and poisoning"
+    return x
 
 
 def make_skeleton() -> pl.DataFrame:
@@ -514,13 +589,35 @@ def set_schema(df: pl.DataFrame) -> pl.DataFrame:
     return df
 
 
+# Column modifying functions --------------------------------------------------
 def replace_ids(df: pl.DataFrame) -> pl.DataFrame:
-    """
-    To decide when is the best time to make the substitution, if at all.
-    """
     for name, mapping in IDS_MAPPINGS.items():
         df = df.with_columns(pl.col(name).replace(mapping))
     return df
+
+
+def replace_icd9s(df: pl.DataFrame) -> pl.DataFrame:
+    # TODO: `diag_1`, `diag_2`, and `diag_3`. Create new or replace?
+    # NOTE: This is _NOT_ a one-to-one mapping, so we will lose information.
+    df = df.with_columns(
+        pl.col("diag_1", "diag_2", "diag_3")
+        .map_elements(icd9_lookup, return_dtype=str)
+    )
+    return df
+# -----------------------------------------------------------------------------
+
+
+def calc_gini_impurity(s: pl.Series) -> float:
+    vc = s.value_counts(normalize=True)
+    vc = vc.with_columns(pl.col("proportion").pow(2).alias("prop2"))
+    return 1 - vc["prop2"].sum()
+
+
+def calc_entropy(s: pl.Series) -> float:
+    p = pl.col("proportion")
+    vc = s.value_counts(normalize=True)
+    vc = vc.with_columns(-p.log(base=2).mul(p).alias("shannon"))
+    return vc["shannon"].sum()
 
 
 def make_datadict(df: pl.DataFrame | None = None) -> pl.DataFrame:
@@ -553,6 +650,10 @@ def make_datadict(df: pl.DataFrame | None = None) -> pl.DataFrame:
             "value_counts": vcds,
             "n_unique": n_uniques,
             "missing_values": missing_values,
+            "mode_pct": [s.value_counts(normalize=True)["proportion"].max()
+                         for s in df],
+            "gini_impurity": [calc_gini_impurity(s) for s in df],
+            "shannon_entropy": [calc_entropy(s) for s in df],
         }
     )
     dd = dd.join(dd2, on="variable", how="left")
@@ -562,7 +663,10 @@ def make_datadict(df: pl.DataFrame | None = None) -> pl.DataFrame:
 def make_and_write_datadict(
     source: str = SOURCE, dest: str = DEST, readonly: bool = True, verbose: bool = False
 ) -> None:
-    df = pl.read_csv(SOURCE, infer_schema=False).pipe(replace_ids).pipe(set_schema)
+    df = (pl.read_csv(SOURCE, infer_schema=False)
+          .pipe(replace_ids)
+          .pipe(replace_icd9s)
+          .pipe(set_schema))
     dd = make_datadict(df)
     if os.path.isfile(dest):
         os.chmod(dest, stat.S_IWRITE)
