@@ -14,6 +14,7 @@ from enum import Enum
 
 import polars as pl
 
+# NOTE: do we really have to construct this metadata? is this not avail somewhere
 
 SOURCE: str = "data/diabetic_data.csv"
 DEST: str = "data/diabetes_datadict.csv"
@@ -42,6 +43,59 @@ class Categories(str, Enum):
     TREATMENT_CHANGES = "Treatment Changes"
     TARGET_VARIABLES = "Target Variables"
 
+
+MISSING_VALUES = {
+    "encounter_id": False,
+    "patient_nbr": False,
+    "race": True,
+    "gender": False,
+    "age": False,
+    "weight": True,
+    "admission_type_id": False,
+    "discharge_disposition_id": False,
+    "admission_source_id": False,
+    "time_in_hospital": False,
+    "payer_code": True,
+    "medical_specialty": True,
+    "num_lab_procedures": False,
+    "num_procedures": False,
+    "num_medications": False,
+    "number_outpatient": False,
+    "number_emergency": False,
+    "number_inpatient": False,
+    "diag_1": True,
+    "diag_2": True,
+    "diag_3": True,
+    "number_diagnoses": False,
+    "max_glu_serum": False,
+    "A1Cresult": False,
+    "metformin": False,
+    "repaglinide": False,
+    "nateglinide": False,
+    "chlorpropamide": False,
+    "glimepiride": False,
+    "acetohexamide": False,
+    "glipizide": False,
+    "glyburide": False,
+    "tolbutamide": False,
+    "pioglitazone": False,
+    "rosiglitazone": False,
+    "acarbose": False,
+    "miglitol": False,
+    "troglitazone": False,
+    "tolazamide": False,
+    "examide": False,
+    "citoglipton": False,
+    "insulin": False,
+    "glyburide-metformin": False,
+    "glipizide-metformin": False,
+    "glimepiride-pioglitazone": False,
+    "metformin-rosiglitazone": False,
+    "metformin-pioglitazone": False,
+    "change": False,
+    "diabetesMed": False,
+    "readmitted": False,
+}
 
 # ---
 FEATURE_TYPES = {
@@ -476,10 +530,15 @@ def make_datadict(df: pl.DataFrame | None = None) -> pl.DataFrame:
     dtypes = []
     n_uniques = []
     vcds = []
+    missing_values = []
     for s in df:
         dtypes.append(str(type(s.dtype)))
         n_uniques.append(s.n_unique())
         vc = s.value_counts().sort(s.name)
+        missing_count = s.is_null().sum()
+        if s.dtype in [pl.String, pl.Enum]:
+            missing_count += (s == "?").sum()
+        missing_values.append(missing_count)
         if vc.height <= 118:
             vcd = dict(zip(vc[s.name], vc["count"]))
             if s.dtype == pl.Enum:
@@ -493,6 +552,7 @@ def make_datadict(df: pl.DataFrame | None = None) -> pl.DataFrame:
             "data_type": dtypes,
             "value_counts": vcds,
             "n_unique": n_uniques,
+            "missing_values": missing_values,
         }
     )
     dd = dd.join(dd2, on="variable", how="left")
