@@ -589,13 +589,22 @@ def set_schema(df: pl.DataFrame) -> pl.DataFrame:
     return df
 
 
+# Column modifying functions --------------------------------------------------
 def replace_ids(df: pl.DataFrame) -> pl.DataFrame:
-    """
-    To decide when is the best time to make the substitution.
-    """
     for name, mapping in IDS_MAPPINGS.items():
         df = df.with_columns(pl.col(name).replace(mapping))
     return df
+
+
+def replace_icd9s(df: pl.DataFrame) -> pl.DataFrame:
+    # TODO: `diag_1`, `diag_2`, and `diag_3`. Create new or replace?
+    # NOTE: This is _NOT_ a one-to-one mapping, so we will lose information.
+    df = df.with_columns(
+        pl.col("diag_1", "diag_2", "diag_3")
+        .map_elements(icd9_lookup, return_dtype=str)
+    )
+    return df
+# -----------------------------------------------------------------------------
 
 
 def calc_gini_impurity(s: pl.Series) -> float:
@@ -654,7 +663,10 @@ def make_datadict(df: pl.DataFrame | None = None) -> pl.DataFrame:
 def make_and_write_datadict(
     source: str = SOURCE, dest: str = DEST, readonly: bool = True, verbose: bool = False
 ) -> None:
-    df = pl.read_csv(SOURCE, infer_schema=False).pipe(replace_ids).pipe(set_schema)
+    df = (pl.read_csv(SOURCE, infer_schema=False)
+          .pipe(replace_ids)
+          .pipe(replace_icd9s)
+          .pipe(set_schema))
     dd = make_datadict(df)
     if os.path.isfile(dest):
         os.chmod(dest, stat.S_IWRITE)
