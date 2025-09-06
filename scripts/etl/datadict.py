@@ -1,6 +1,7 @@
-#!/usr/bin/env python
+#!C:\Users\rosco\AppData\Roaming\mamba\envs\ds
+#/usr/bin/env python
 # datadict.py
-# 2025-09-02
+# 2025-09-06
 # Roscoe
 
 """
@@ -438,65 +439,85 @@ def icd9_lookup(x: str) -> str:
     if x == "?":
         return x
     elif x.startswith("V"):
-        return "supplemental classification"
+        return "Supplemental classification"
     elif x.startswith("E"):
-        return "external causes of injury "
+        return "External causes of injury "
 
     x_num = float(x)
     if 1 <= x_num <= 139:
-        return "infectious and parasitic diseases"
+        # return "infectious and parasitic diseases"
+        return "Infections"
     elif 140 <= x_num <= 239:
-        return "neoplasms"
+        return "Neoplasms"
 
     # -------------------------------------------------------------------------
     # Drill down into this category because diabetes is the focus.
     # elif 240 <= x_num <= 279:
     #     return ("endocrine, nutritional and metabolic diseases, and immunity "
     #             "disorders")
-    elif 240 <= x_num < 247:
-        return "Disorders of thyroid gland"
-    elif 249 <= x_num < 250:
-        return "Secondary diabetes mellitus"
     elif 250 <= x_num < 251:
         return "Diabetes mellitus"
-    elif 251 <= x_num < 260:
-        return "Diseases of other endocrine glands"
+    elif 249 <= x_num < 250:
+        return "Secondary diabetes mellitus"
+    elif 240 <= x_num < 280:
+        return "Other metabolic and immunity disorders"
+
     # elif 249 <= x_num < 260:
     #     return "Diseases of other endocrine glands"
-    elif 260 <= x_num < 270:
-        return "Nutritional deficiencies"
-    elif 270 <= x_num < 280:
-        return "Other metabolic and immunity disorders"
+
+    # elif 240 <= x_num < 247:
+    #     return "Disorders of thyroid gland"
+    # elif 251 <= x_num < 260:
+    #     return "Diseases of other endocrine glands"
+
+    # elif 260 <= x_num < 270:
+    #     return "Nutritional deficiencies"
+    # elif 270 <= x_num < 280:
+    #     return "Other metabolic and immunity disorders"
     # -------------------------------------------------------------------------
 
     elif 280 <= x_num <= 289:
-        return "diseases of the blood and blood-forming organs"
+        # return "diseases of the blood and blood-forming organs"
+        return "Blood"
     elif 290 <= x_num <= 319:
-        return "mental disorders"
+        # return "mental disorders"
+        return "Mental"
     elif 320 <= x_num <= 389:
-        return "diseases of the nervous system and sense organs"
+        # return "diseases of the nervous system and sense organs"
+        return "Nervous"
     elif 390 <= x_num <= 459:
-        return "diseases of the circulatory system"
+        # return "diseases of the circulatory system"
+        return "Circulatory"
     elif 460 <= x_num <= 519:
-        return "diseases of the respiratory system"
+        # return "diseases of the respiratory system"
+        return "Respiratory"
     elif 520 <= x_num <= 579:
-        return "diseases of the digestive system"
+        # return "diseases of the digestive system"
+        return "Digestive"
     elif 580 <= x_num <= 629:
-        return "diseases of the genitourinary system"
+        # return "diseases of the genitourinary system"
+        return "Genitourinary"
     elif 630 <= x_num <= 679:
-        return "complications of pregnancy, childbirth, and the puerperium"
+        # return "complications of pregnancy, childbirth, and the puerperium"
+        return "OBGYN"
     elif 680 <= x_num <= 709:
-        return "diseases of the skin and subcutaneous tissue"
+        # return "diseases of the skin and subcutaneous tissue"
+        return "Dermatology"
     elif 710 <= x_num <= 739:
-        return "diseases of the musculoskeletal system and connective tissue"
+        # return "diseases of the musculoskeletal system and connective tissue"
+        return "Musculoskeletal"
     elif 740 <= x_num <= 759:
-        return "congenital anomalies"
+        # return "congenital anomalies"
+        return "Congenital"
     elif 760 <= x_num <= 779:
-        return "certain conditions originating in the perinatal period"
+        # return "certain conditions originating in the perinatal period"
+        return "Perinatal"
     elif 780 <= x_num <= 799:
-        return "symptoms, signs, and ill-defined conditions"
+        # return "symptoms, signs, and ill-defined conditions"
+        return "Ill-defined"
     elif 800 <= x_num <= 999:
-        return "injury and poisoning"
+        # return "injury and poisoning"
+        return "Injury/Poisoning"
     return x
 
 
