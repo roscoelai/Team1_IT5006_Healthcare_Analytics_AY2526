@@ -1,5 +1,4 @@
-#!C:\Users\rosco\AppData\Roaming\mamba\envs\ds
-#/usr/bin/env python
+#!/usr/bin/env python
 # datadict.py
 # 2025-09-06
 # Roscoe
@@ -438,10 +437,12 @@ def icd9_lookup(x: str) -> str:
     # These may not be interesting.
     if x == "?":
         return x
-    elif x.startswith("V"):
-        return "Supplemental classification"
-    elif x.startswith("E"):
-        return "External causes of injury "
+    # elif x.startswith("E"):
+    #     return "External causes of injury"
+    # elif x.startswith("V"):
+    #     return "Supplemental classification"
+    elif x.startswith("E") or x.startswith("V"):
+        return "Injury/Supplemental classification"
 
     x_num = float(x)
     if 1 <= x_num <= 139:
@@ -455,12 +456,12 @@ def icd9_lookup(x: str) -> str:
     # elif 240 <= x_num <= 279:
     #     return ("endocrine, nutritional and metabolic diseases, and immunity "
     #             "disorders")
-    elif 250 <= x_num < 251:
+    elif 249 <= x_num < 251:
         return "Diabetes mellitus"
-    elif 249 <= x_num < 250:
-        return "Secondary diabetes mellitus"
+    # elif 249 <= x_num < 250:
+    #     return "Secondary diabetes mellitus"
     elif 240 <= x_num < 280:
-        return "Other metabolic and immunity disorders"
+        return "Other metabolic and immunity"
 
     # elif 249 <= x_num < 260:
     #     return "Diseases of other endocrine glands"
