@@ -3,6 +3,7 @@ matplotlib
 numpy
 pandas
 polars
+pyplot
 scikit-learn
 seaborn
 streamlit
