@@ -32,6 +32,7 @@ df = load_csv_data(os.path.join(data_dir, "diabetic_data.csv"))
 metadata = load_csv_data(os.path.join(data_dir, "diabetes_datadict.csv"))
 
 # ---
+# TODO: check if all the .copy() are necessary - not needed if not modifying the df
 
 st.title("Exploratory Data Analysis")
 
@@ -397,19 +398,19 @@ with st.container(border=True):
         st.subheader("Distribution of Demographic Features")
         st.markdown(
             """
-            - There is a relatively low number of encounters involving patients below 30 years old.  
-            - The is a high number of encounters involving older patients, peaking at the 70-80 age group.  
+            - Relatively low number of encounters involving patients below 30 years old.  
+            - High number of encounters involving older patients, peaking at [70-80) age group.  
             - The drop in encounters involving patients above 80 years old is likely due to mortality.
-            - There is a fairly balanced distribution of encounters involving male and female patients.  
+            - Fairly balanced distribution of encounters involving male and female patients.  
+            - Racial distribution heavily skewed towards Caucasian and African American patients,
+            which together account for over 93.7% of the records.
             """
         )
     with col2:
-        tab1, tab2 = st.tabs(["Age", "Gender"])
+        tab1, tab2, tab3 = st.tabs(["Age", "Gender", "Race"])
         with tab1:
             # filter only readmitted patients
             age_df = df.copy()
-            # age_df = age_df[age_df["readmitted"] != "NO"]
-
             # plot bar chart with x age group
             fig = px.bar(
                 age_df["age"].value_counts().sort_index(),
@@ -491,8 +492,6 @@ with st.container(border=True):
 
         with tab2:
             gender_df = df.copy()
-            # gender_df = gender_df[gender_df["readmitted"] != "NO"]
-
             # pie chart showing distribution of gender
             fig = px.pie(
                 gender_df,
@@ -517,6 +516,25 @@ with st.container(border=True):
                 margin=dict(t=70, b=70, l=0, r=0),
             )
             st.plotly_chart(fig, use_container_width=True)
+        with tab3:
+            race_df = df.copy()
+            fig = px.treemap(
+                race_df,
+                path=["race"],
+                title="Racial Distribution",
+            )
+            fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
+            fig.update_traces(
+                textinfo="percent entry+label",
+                textposition="middle center",
+                textfont_size=16,
+                marker=dict(line=dict(color="black", width=2)),
+            )
+            # show % in hover
+            fig.data[0].hovertemplate = (
+                "<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percentParent:.1%}<extra></extra>"
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
 # with st.expander(
 #     "Distribution of Readmission Status (Target Variable)", expanded=False
@@ -525,16 +543,15 @@ with st.container(border=True):
     col1, col2 = st.columns([2, 5])
     with col1:
         # Text Summary
-        with st.container(height="stretch", vertical_alignment="center"):
-            st.subheader("Moderate class imbalance in readmission status")
-            st.markdown(
-                """
-                - `NO` (no readmission) accounts for over half of the records *(53.9%)*  
-                - It ***might be*** beneficial to group the readmission status into
-                a binary classification problem (e.g., "No Readmission" vs. 
-                "Readmission") to address the class imbalance.  
-                """
-            )
+        st.subheader("Moderate class imbalance in readmission status")
+        st.markdown(
+            """
+            - `NO` (no readmission) accounts for over half of the records *(53.9%)*  
+            - It ***might be*** beneficial to group the readmission status into
+            a binary classification problem (e.g., "No Readmission" vs. 
+            "Readmission") to address the class imbalance.  
+            """
+        )
 
     with col2:
         # Visualization

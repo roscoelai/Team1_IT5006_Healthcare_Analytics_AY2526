@@ -139,6 +139,7 @@ class TargetCorrCard:
                 )
             with col2:
                 pass
+
         # with st.expander("Race Vs Readmission"):
         with st.container(border=True):
             col1, col2 = st.columns([2, 5])
@@ -147,12 +148,79 @@ class TargetCorrCard:
                 st.markdown(
                     """
                     - African American and Caucasian patients show higher readmission rates.  
+                    - They also constitute the majority of the patient population in the dataset (93.7%), driving the overall readmission trends.  
                     - Missing values in this feature weaken the confidence of the finding, but it nonetheless raises questions 
                     about the potential diet / healthcare support in these countries that may affect the readmission rates.
                     """
                 )
             with col2:
-                pass
+                with st.container(height="stretch", vertical_alignment="top"):
+                    tab1, tab2 = st.tabs(["Readmission Rates", "Racial Distribution"])
+                with tab1:
+                    race_df = self.df.copy()
+                    race_df["readmitted"] = race_df["readmitted"].replace(
+                        {"<30": "YES", ">30": "YES"}
+                    )
+
+                    # Bar chart showing % of readmission by race. only need to plot "YES" bars
+                    values = (
+                        pd.crosstab(
+                            index=race_df["race"],
+                            columns=race_df["readmitted"],
+                            normalize="index",
+                        )
+                        .reset_index()
+                        .rename(columns={0: "percentage"})
+                    )
+                    values["text"] = values["YES"].apply(lambda x: f"{x:.1%}")
+                    values = values.sort_values(by="YES", ascending=False)
+                    fig = px.bar(
+                        x=values["race"],
+                        y=values["YES"],
+                        title="Readmission Rates for Different Racial Groups",
+                        text=values["text"],
+                        range_y=[0, 1],
+                        # relabel x and y axis
+                        labels={"x": "Race", "y": "Readmission Rate"},
+                    )
+                    fig.update_traces(
+                        marker=dict(
+                            color="indianred", line=dict(color="black", width=1)
+                        ),
+                        textposition="auto",
+                        textfont_size=14,
+                    )
+                    fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
+
+                    # horizontal line for average readmission rate
+                    avg_readmit_rate = (self.df["readmitted"] != "NO").mean()
+                    fig.add_hline(
+                        y=avg_readmit_rate,
+                        line_dash="dash",
+                        line_color="white",
+                        annotation_text=f"Average Readmission Rate: {avg_readmit_rate:.1%}",
+                        annotation_position="top right",
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                with tab2:
+                    fig = px.treemap(
+                        race_df,
+                        path=["race"],
+                        title="Racial Distribution",
+                    )
+                    fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
+                    fig.update_traces(
+                        textinfo="percent entry+label",
+                        textposition="middle center",
+                        textfont_size=16,
+                        marker=dict(line=dict(color="black", width=2)),
+                    )
+                    # show % in hover
+                    fig.data[0].hovertemplate = (
+                        "<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percentParent:.1%}<extra></extra>"
+                    )
+                    st.plotly_chart(fig, use_container_width=True, key="race_target")
+
         # with st.expander("Inpatient Visits Vs Readmission"):
         with st.container(border=True):
             col1, col2 = st.columns([2, 5])
@@ -194,7 +262,99 @@ class TargetCorrCard:
                     """
                 )
             with col2:
-                pass
+                tab1, tab2 = st.tabs(
+                    ["Average Emergency Visits", "Emergency Visits Distribution"]
+                )
+                with tab1:
+                    # vertical bar chart showing mean number of emergency visits by readmission status
+                    mean_emerg = (
+                        self.df.groupby("readmitted")["number_emergency"]
+                        .mean()
+                        .reset_index()
+                    )
+                    readmitted_order = ["<30", ">30", "NO"]
+                    readmitted_color = ["indianred", "orange", "lightgreen"]
+                    fig = px.bar(
+                        mean_emerg,
+                        title="Average Number of Emergency Visits by Readmission Status",
+                        x="readmitted",
+                        y="number_emergency",
+                        color="readmitted",
+                        category_orders={"readmitted": readmitted_order},
+                        color_discrete_sequence=readmitted_color,
+                        labels={
+                            "number_emergency": "Average Number of Emergency Visits"
+                        },
+                    )
+                    fig.update_traces(
+                        marker=dict(line=dict(color="black", width=1)),
+                        textposition="auto",
+                        texttemplate="%{y:.2f}",
+                        textfont_color="white",
+                        textfont_size=16,
+                    )
+                    fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
+
+                    avg_emerg = self.df["number_emergency"].mean()
+                    fig.add_hline(
+                        y=avg_emerg,
+                        line_dash="dash",
+                        line_color="white",
+                        annotation_text=f"Average Number of Emergency Visits: {avg_emerg:.2f}",
+                        annotation_position="top right",
+                    )
+
+                    with st.container(
+                        horizontal=True,
+                        horizontal_alignment="center",
+                        vertical_alignment="center",
+                        height="stretch",
+                    ):
+                        st.plotly_chart(
+                            fig, use_container_width=True, use_container_height=True
+                        )
+            with tab2:
+                emerg_df = self.df.copy()
+
+                # bin to 0, [1-2], [3-5], [6-10], [11-20], >20
+                bins = [-1, 0, 2, 5, 10, 20, emerg_df["number_emergency"].max()]
+                labels = ["0", "1-2", "3-5", "6-10", "11-20", ">20"]
+                emerg_df["emerg_bin"] = pd.cut(
+                    emerg_df["number_emergency"], bins=bins, labels=labels
+                )
+
+                bin_counts = (
+                    emerg_df["emerg_bin"].value_counts().sort_index().reset_index()
+                )
+                bin_counts.columns = ["emerg_bin", "count"]
+                total = bin_counts["count"].sum()
+                bin_counts["percent"] = bin_counts["count"] / total
+
+                # bar chart of emergency visits distribution
+                fig = px.bar(
+                    emerg_df["emerg_bin"].value_counts().sort_index().reset_index(),
+                    x="emerg_bin",
+                    y="count",
+                    title="Distribution of Emergency Visits",
+                    labels={
+                        "index": "Number of Emergency Visits",
+                        "emerg_bin": "Count",
+                    },
+                )
+                # add text labels
+                fig.update_traces(
+                    marker=dict(color="indianred", line=dict(color="black", width=1)),
+                    text=[
+                        f"{c:,} ({p:.1%})"
+                        for c, p in zip(bin_counts["count"], bin_counts["percent"])
+                    ],
+                    textposition="auto",
+                    textfont_color="white",
+                    textfont_size=16,
+                )
+                fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
+                st.plotly_chart(fig, use_container_width=True, key="emergency_target")
+
         # with st.expander("Primary Diagnosis Vs Readmission"):
         with st.container(border=True):
             col1, col2 = st.columns([2, 5])
