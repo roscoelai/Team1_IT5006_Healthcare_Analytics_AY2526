@@ -23,26 +23,222 @@ class TargetCorrCard:
             "description"
         ].values[0]
         st.markdown(f"{target_desc}")
-        st.subheader("Key Findings:")
-        st.markdown(
-            """
-        1. **Older patients display higher readmission rates**, with those aged 70 and 
-        above particularly prone to short-term (<30 days) readmissions. This is 
-        expected due to the higher risk of health complications in older adults.  
-        2. **Longer hospital stay seems to be correlated with higher likelihood of 
-        being readmitted**. Patients discharged after extended stays may have unresolved 
-        complications or more severe baseline conditions, increasing their subsequent 
-        risk of readmission.  
-        3. **Patients with a higher number of medications appear to have a higher likelihood of readmission.**
-        4. **Patients on diabetic medications also have a higher likelihood of readmission.**
-        5. **Patients with frequent adjustments to their diabetes medications, particularly insulin, 
-        are more likely to be readmitted within 30 days.** This suggests unstable 
-        glycemic control and difficulty in stabilizing treatment regimens. The presence of polypharmacy may also serve as a proxy for overall health complexity.
-        6. **African American and Caucasian patients show higher readmission rates.** Missing values 
-        in this feature weaken the confidence of the finding, but it nonetheless raises questions 
-        about the potential diet / healthcare support in these countries that may affect the readmission rates.
-        """
-        )
+        st.markdown("Key findings from the analysis:")
+
+        # with st.expander("Age Vs Readmission"):
+        with st.container(border=True):
+            col1, col2 = st.columns([2, 5])
+            with col1:
+                st.subheader("Older patients have higher readmission rates")
+                st.markdown(
+                    """
+                    - Those aged 70 and above particularly prone to short-term (<30 days) readmissions.  
+                    - This is expected due to the higher risk of health complications in older adults.  
+                """
+                )
+            with col2:
+                # Stacked bar chart showing % of readmission by age group
+                values = (
+                    pd.crosstab(
+                        self.df["age"], self.df["readmitted"], normalize="index"
+                    )
+                    .reset_index()
+                    .melt(id_vars="age", var_name="readmitted", value_name="Proportion")
+                )
+                values["text"] = values["Proportion"].apply(lambda x: f"{x:.1%}")
+
+                readmitted_order = ["<30", ">30", "NO"]
+                readmitted_color = ["indianred", "orange", "lightgreen"]
+                fig = px.bar(
+                    values,
+                    title="Proportion of Readmission by Age Group",
+                    x="age",
+                    y="Proportion",
+                    color="readmitted",
+                    text="text",
+                    barmode="stack",
+                    category_orders={"readmitted": readmitted_order},
+                    color_discrete_sequence=readmitted_color,
+                )
+                fig.update_traces(
+                    marker=dict(line=dict(color="black", width=1)),
+                    textposition="auto",
+                    textfont_size=14,
+                )
+                fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
+                with st.container(
+                    horizontal=True,
+                    horizontal_alignment="center",
+                    vertical_alignment="center",
+                    height="stretch",
+                ):
+                    st.plotly_chart(fig, use_container_width=True)
+
+        # with st.expander("Time in Hospital Vs Readmission"):
+        with st.container(border=True):
+            col1, col2 = st.columns([2, 5])
+            with col1:
+                st.subheader(
+                    "Longer hospital stays are associated with higher readmission rates"
+                )
+                st.markdown(
+                    """
+                    - Patients with extended hospital stays appears to be correlated with higher readmission rates.  
+                    - This ***suggests*** that prolonged hospitalization may indicate more severe or complex health issues, leading to increased risk of readmission.  
+                    """
+                )
+            with col2:
+                mean_hosp = (
+                    self.df.groupby("readmitted")["time_in_hospital"]
+                    .mean()
+                    .reset_index()
+                )
+                readmitted_order = ["<30", ">30", "NO"]
+                readmitted_color = ["indianred", "orange", "lightgreen"]
+                fig = px.bar(
+                    mean_hosp,
+                    title="Average Time in Hospital by Readmission Status",
+                    x="readmitted",
+                    y="time_in_hospital",
+                    color="readmitted",
+                    category_orders={"readmitted": readmitted_order},
+                    color_discrete_sequence=readmitted_color,
+                    labels={"time_in_hospital": "Average Time in Hospital (days)"},
+                )
+                fig.update_traces(
+                    marker=dict(line=dict(color="black", width=1)),
+                    textposition="auto",
+                    texttemplate="%{y:.2f}",
+                    # Bold the labels
+                    textfont_color="black",
+                    textfont_size=16,
+                )
+                fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
+                with st.container(
+                    horizontal=True,
+                    horizontal_alignment="center",
+                    vertical_alignment="center",
+                    height="stretch",
+                ):
+                    st.plotly_chart(
+                        fig, use_container_width=True, use_container_height=True
+                    )
+
+        # with st.expander("Medications Vs Readmission"):
+        with st.container(border=True):
+            col1, col2 = st.columns([2, 5])
+            with col1:
+                st.subheader("Medication Usage and Readmission Rates")
+                st.markdown(
+                    """
+                    - Patients on a higher number of medications tend to have increased readmission rates.  
+                    - Those on diabetic medications are associated with higher readmission rates.
+                    - Frequent adjustments to diabetes medications are also linked to higher readmission rates.  
+                    This suggests unstable glycemic control and difficulty in stabilizing treatment regimens.  
+                    """
+                )
+            with col2:
+                pass
+        # with st.expander("Race Vs Readmission"):
+        with st.container(border=True):
+            col1, col2 = st.columns([2, 5])
+            with col1:
+                st.subheader("Racial Disparities in Readmission Rates")
+                st.markdown(
+                    """
+                    - African American and Caucasian patients show higher readmission rates.  
+                    - Missing values in this feature weaken the confidence of the finding, but it nonetheless raises questions 
+                    about the potential diet / healthcare support in these countries that may affect the readmission rates.
+                    """
+                )
+            with col2:
+                pass
+        # with st.expander("Inpatient Visits Vs Readmission"):
+        with st.container(border=True):
+            col1, col2 = st.columns([2, 5])
+            with col1:
+                st.subheader("Frequent Inpatient Visits and Readmission Rates")
+                st.markdown(
+                    """
+                    - Patients with a history of frequent inpatient visits are more likely to be readmitted.  
+                    - This trend is particularly pronounced for short-term (<30 days) readmissions.  
+                    - This suggest repeated hospitalizations may indicate chronic or poorly managed health conditions.  
+                    """
+                )
+            with col2:
+                pass
+        # with st.expander("Discharge Disposition Vs Readmission"):
+        with st.container(border=True):
+            col1, col2 = st.columns([2, 5])
+            with col1:
+                st.subheader("Patients discharged to home have lower readmission rates")
+                st.markdown(
+                    """
+                    - Patients discharged to home are less likely to be readmitted compared to those discharged to other facilities.
+                    - This suggests that pateints requiring further care or rehabilitation may have more complex health needs, leading to higher readmission rates.  
+                    """
+                )
+            with col2:
+                pass
+        # with st.expander("Emergency Visits Vs Readmission"):
+        with st.container(border=True):
+            col1, col2 = st.columns([2, 5])
+            with col1:
+                st.subheader(
+                    "Frequent Emergency Visits Linked to Higher Readmission Rates"
+                )
+                st.markdown(
+                    """
+                    - Higher number of emergency visits correlates with increased readmission rates.  
+                    - This sugggests inadequate disease control or limited access to regular outpatient care.  
+                    """
+                )
+            with col2:
+                pass
+        # with st.expander("Primary Diagnosis Vs Readmission"):
+        with st.container(border=True):
+            col1, col2 = st.columns([2, 5])
+            with col1:
+                st.subheader("Comorbidities Influence Readmission Rates")
+                st.markdown(
+                    """
+                    - Patients admitted for circulatory and endocrine conditions have higher readmission rates.  
+                    - This underscores the impact of comorbidities on readmission risk.  
+                    """
+                )
+            with col2:
+                pass
+        # with st.expander("HbA1c Level Vs Readmission"):
+        with st.container(border=True):
+            col1, col2 = st.columns([2, 5])
+            with col1:
+                st.subheader(
+                    "Higher HbA1c Levels Associated with Increased Readmission Rates"
+                )
+                st.markdown(
+                    """
+                    - Patients with elevated HbA1c levels exhibit higher readmission rates.  
+                    - This is consistent with the understanding that poor glycemic control increases the risk of complications and hospitalizations.  
+                    """
+                )
+            with col2:
+                pass
+
+        # with st.expander("Number of Procedures Vs Readmission"):
+        with st.container(border=True):
+            col1, col2 = st.columns([2, 5])
+            with col1:
+                st.subheader(
+                    "More Procedures During Stay Associated with Higher Readmission Rates"
+                )
+                st.markdown(
+                    """
+                    - Patients undergoing multiple procedures during their hospital stay tend to have higher readmission rates.  
+                    - This suggests that more complex medical interventions may indicate severe health conditions, leading to increased risk of readmission.  
+                    """
+                )
+            with col2:
+                pass
 
     def _plot_boxplot(self):
         readmitted_order = ["<30", ">30", "NO"]
@@ -91,22 +287,23 @@ class TargetCorrCard:
                         yield col
                     col_count += 1
 
-        for col, num_var in zip(gen_cols(len(num_var), num_cols_per_row), num_var):
-            with col:
-                fig = px.box(
-                    self.df,
-                    x=num_var,
-                    y=self.target_var,
-                    points="suspectedoutliers" if show_outliers else False,
-                    color="readmitted",
-                    category_orders={self.target_var: readmitted_order},
-                    color_discrete_sequence=readmitted_color,
-                )
-                fig.update_yaxes(tickfont=dict(family="Arial Black", size=12))
-                fig.update_layout(showlegend=False)
-                st.plotly_chart(
-                    fig, key=f"target_box_{num_var}", use_container_width=True
-                )
+        with st.container(border=True):
+            for col, num_var in zip(gen_cols(len(num_var), num_cols_per_row), num_var):
+                with col:
+                    fig = px.box(
+                        self.df,
+                        x=num_var,
+                        y=self.target_var,
+                        points="suspectedoutliers" if show_outliers else False,
+                        color="readmitted",
+                        category_orders={self.target_var: readmitted_order},
+                        color_discrete_sequence=readmitted_color,
+                    )
+                    fig.update_yaxes(tickfont=dict(family="Arial Black", size=12))
+                    fig.update_layout(showlegend=False)
+                    st.plotly_chart(
+                        fig, key=f"target_box_{num_var}", use_container_width=True
+                    )
 
     def _plot_barchart(self):
         categorical_cols = self.metadata[
@@ -143,7 +340,7 @@ class TargetCorrCard:
                 key="target_cat_cols_per_row",
                 horizontal=True,
                 label_visibility="collapsed",
-                index=1,
+                index=0,  # defult show 1
             )
 
         def gen_cols(count: int, num_cols: int = 3):
@@ -156,45 +353,45 @@ class TargetCorrCard:
                         yield col
                     col_count += 1
 
-        for col, cat_var in zip(gen_cols(len(cat_var), num_cols_per_row), cat_var):
-            with col:
-                # Grouped bar chart showing %
-                values = (
-                    pd.crosstab(
-                        self.df[cat_var],
-                        self.df[self.target_var],
-                        normalize="index",
+        with st.container(border=True):
+            for col, cat_var in zip(gen_cols(len(cat_var), num_cols_per_row), cat_var):
+                with col:
+                    # Grouped bar chart showing %
+                    values = (
+                        pd.crosstab(
+                            self.df[cat_var],
+                            self.df[self.target_var],
+                            normalize="index",
+                        )
+                        .reset_index()
+                        .melt(
+                            id_vars=cat_var,
+                            var_name=self.target_var,
+                            value_name="Proportion",
+                        )
                     )
-                    .reset_index()
-                    .melt(
-                        id_vars=cat_var,
-                        var_name=self.target_var,
-                        value_name="Proportion",
+                    values["text"] = values["Proportion"].apply(lambda x: f"{x:.1%}")
+                    readmitted_order = ["<30", ">30", "NO"]
+                    readmitted_color = ["#FF5733", "#CCCC00", "#98FB98"]
+                    fig = px.bar(
+                        values,
+                        x=cat_var,
+                        y="Proportion",
+                        color=self.target_var,
+                        text="text",
+                        barmode="group",
+                        category_orders={self.target_var: readmitted_order},
+                        color_discrete_sequence=readmitted_color,
+                        range_y=[0, 1],
                     )
-                )
-                values["text"] = values["Proportion"].apply(lambda x: f"{x:.1%}")
-                readmitted_order = ["<30", ">30", "NO"]
-                readmitted_color = ["#FF5733", "#CCCC00", "#98FB98"]
-                fig = px.bar(
-                    values,
-                    x=cat_var,
-                    y="Proportion",
-                    color=self.target_var,
-                    text="text",
-                    barmode="group",
-                    category_orders={self.target_var: readmitted_order},
-                    color_discrete_sequence=readmitted_color,
-                    range_y=[0, 1],
-                )
-                fig.update_yaxes(tickfont=dict(family="Arial Black", size=12))
-                st.plotly_chart(
-                    fig, key=f"target_bar_{cat_var}", use_container_width=True
-                )
+                    fig.update_yaxes(tickfont=dict(family="Arial Black", size=12))
+                    st.plotly_chart(
+                        fig, key=f"target_bar_{cat_var}", use_container_width=True
+                    )
 
     def render(self):
-        with st.container(border=True):
-            self._render_summary_description()
-
+        self._render_summary_description()
+        with st.expander("Interactive Analysis (Target Variable)", expanded=False):
             tab1, tab2 = st.tabs(
                 [
                     "Target <-> Numerical",

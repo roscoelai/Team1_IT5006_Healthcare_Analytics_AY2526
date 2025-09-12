@@ -1,3 +1,4 @@
+import re
 import os
 import sys
 from enum import Enum
@@ -35,7 +36,7 @@ metadata = load_csv_data(os.path.join(data_dir, "diabetes_datadict.csv"))
 st.title("Exploratory Data Analysis")
 
 # ------------------------------------------------------------------------------
-# 1. Univariate Analysis
+# Univariate Analysis
 # ------------------------------------------------------------------------------
 st.subheader("Univariate Analysis")
 st.markdown(
@@ -48,7 +49,8 @@ st.markdown(
 )
 
 
-with st.expander("Missing Values in Features", expanded=False):
+# with st.expander("Missing Values in Features", expanded=False):
+with st.container(border=True):
     col1, col2 = st.columns([2, 5])
     with col1:
         st.subheader("Missing Values in Features")
@@ -134,7 +136,8 @@ with st.expander("Missing Values in Features", expanded=False):
 
         st.plotly_chart(fig, use_container_width=True)
 
-with st.expander("Uniformity in Features", expanded=False):
+# with st.expander("Uniformity in Features", expanded=False):
+with st.container(border=True):
     col1, col2 = st.columns([2, 5])
 
     with col1:
@@ -205,8 +208,8 @@ with st.expander("Uniformity in Features", expanded=False):
         st.write(low_variance_df.style.apply(highlight_mode_perc, subset=["% mode"]))
 
 
-with st.expander("Multiple Patient Encounters", expanded=False):
-
+# with st.expander("Multiple Patient Encounters", expanded=False):
+with st.container(border=True):
     col1, col2 = st.columns([2, 5])
     with col1:
         st.subheader("Multiple Patient Encounters")
@@ -304,8 +307,8 @@ with st.expander("Multiple Patient Encounters", expanded=False):
             st.plotly_chart(fig, use_container_width=True)
 
 
-with st.expander("Outliers", expanded=False):
-
+# with st.expander("Outliers", expanded=False):
+with st.container(border=True):
     col1, col2 = st.columns([2, 5])
     with col1:
         st.subheader("Features with Outliers")
@@ -346,39 +349,49 @@ with st.expander("Outliers", expanded=False):
             outlier_info.append(
                 {
                     "variable": feature,
-                    "Outliers (1.5IQR)": num_outliers_1_5,
-                    "Outliers % (1.5IQR)": perc_outliers_1_5 * 100,
-                    "Outliers (3.0IQR)": num_outliers_3_0,
-                    "Outliers % (3.0IQR)": perc_outliers_3_0 * 100,
+                    "Outliers_15_IQR": num_outliers_1_5,
+                    "Outliers_15_IQR_PERC": perc_outliers_1_5 * 100,
+                    "Outliers_30_IQR": num_outliers_3_0,
+                    "Outliers_30_IQR_PERC": perc_outliers_3_0 * 100,
                 }
             )
 
         outlier_df = pd.DataFrame(outlier_info)
         outlier_df = outlier_df.sort_values(
-            by="Outliers % (1.5IQR)", ascending=False
+            by="Outliers_15_IQR", ascending=False
         ).reset_index(drop=True)
-        outlier_df["Outliers % (1.5IQR)"] = outlier_df["Outliers % (1.5IQR)"].apply(
-            lambda x: f"{x:.2f}%"
-        )
-        outlier_df["Outliers % (3.0IQR)"] = outlier_df["Outliers % (3.0IQR)"].apply(
-            lambda x: f"{x:.2f}%"
-        )
+
+        outlier_df["Outliers (1.5 IQR)"] = outlier_df["Outliers_15_IQR"].apply(
+            lambda x: f"{x:,}"
+        ) + outlier_df["Outliers_15_IQR_PERC"].apply(lambda x: f" ({x:.2f}%)")
+        outlier_df["Outliers (3.0 IQR)"] = outlier_df["Outliers_30_IQR"].apply(
+            lambda x: f"{x:,}"
+        ) + outlier_df["Outliers_30_IQR_PERC"].apply(lambda x: f" ({x:.2f}%)")
+
         outlier_df.index += 1  # Start index from 1 instead of 0
 
         def highlight_outlier_perc(s):
             # opacity from 0 to 1 based on percentage
-            opacity = [min(1, float(v.strip("%")) / 20) for v in s]
+            opacity = [
+                min(1, float(v) / 20)
+                for v in s
+                for v in re.findall(r"\((\d+\.\d+)%\)", v)
+            ]
             return [f"background-color: rgba(255, 0, 0, {o})" for o in opacity]
 
         st.write(f"Number of records in dataset: {len(df):,}")
         st.write(
-            outlier_df.style.apply(
+            # outlier_df,
+            outlier_df[
+                ["variable", "Outliers (1.5 IQR)", "Outliers (3.0 IQR)"]
+            ].style.apply(
                 highlight_outlier_perc,
-                subset=["Outliers % (1.5IQR)", "Outliers % (3.0IQR)"],
+                subset=["Outliers (1.5 IQR)", "Outliers (3.0 IQR)"],
             )
         )
 
-with st.expander("Distribution of Demographic Features", expanded=False):
+# with st.expander("Distribution of Demographic Features", expanded=False):
+with st.container(border=True):
     col1, col2 = st.columns([2, 5])
     with col1:
         st.subheader("Distribution of Demographic Features")
@@ -505,9 +518,10 @@ with st.expander("Distribution of Demographic Features", expanded=False):
             )
             st.plotly_chart(fig, use_container_width=True)
 
-with st.expander(
-    "Distribution of Readmission Status (Target Variable)", expanded=False
-):
+# with st.expander(
+#     "Distribution of Readmission Status (Target Variable)", expanded=False
+# ):
+with st.container(border=True):
     col1, col2 = st.columns([2, 5])
     with col1:
         # Text Summary
@@ -572,31 +586,39 @@ with st.expander(
         fig.update_layout(showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
 
-st.info(
-    """***🔍 Select a variable from the dropdown below to view its univariate 
-    metrics and visualizations.***"""
-)
-selected_var = st.selectbox(
-    "Select a variable to view metrics:", metadata["variable"].tolist()
-)
-data_dict_series = metadata[metadata["variable"] == selected_var]
-feature_type = data_dict_series["feature_type"].values[0]
+with st.expander("Interactive Analysis (Univariate)", expanded=False):
+    st.info(
+        """🔍 Select a variable from the dropdown below to view its univariate 
+        metrics and visualizations."""
+    )
+    selected_var = st.selectbox(
+        "Select a variable to view metrics:", metadata["variable"].tolist()
+    )
+    data_dict_series = metadata[metadata["variable"] == selected_var]
+    feature_type = data_dict_series["feature_type"].values[0]
 
-match feature_type:
-    case FeatureType.IDENTIFIER:
-        IdentifierCard(df[selected_var], data_dict_series).render()
-    case FeatureType.DISCRETE | FeatureType.CONTINUOUS:
-        NumericalCard(df[selected_var], data_dict_series).render()
-    case FeatureType.NOMINAL | FeatureType.ORDINAL:
-        CategoricalCard(df[selected_var], data_dict_series).render()
-    case FeatureType.BOOLEAN:
-        CategoricalCard(df[selected_var], data_dict_series).render()
-    case _:
-        st.warning(f"Feature type '{feature_type}' is not supported.")
+    match feature_type:
+        case FeatureType.IDENTIFIER:
+            IdentifierCard(df[selected_var], data_dict_series).render()
+        case FeatureType.DISCRETE | FeatureType.CONTINUOUS:
+            NumericalCard(df[selected_var], data_dict_series).render()
+        case FeatureType.NOMINAL | FeatureType.ORDINAL:
+            CategoricalCard(df[selected_var], data_dict_series).render()
+        case FeatureType.BOOLEAN:
+            CategoricalCard(df[selected_var], data_dict_series).render()
+        case _:
+            st.warning(f"Feature type '{feature_type}' is not supported.")
 
 
 # ------------------------------------------------------------------------------
-# 3. Bivariate / Multivariate Analysis
+# Relationship with Target Variable
+# ------------------------------------------------------------------------------
+st.subheader("Relationship with Target Variable")
+
+TargetCorrCard(df, metadata, target_var="readmitted").render()
+
+# ------------------------------------------------------------------------------
+# Bivariate / Multivariate Analysis
 # ------------------------------------------------------------------------------
 st.subheader("Bivariate / Multivariate Analysis")
 
@@ -614,10 +636,3 @@ with tab2:
     CategoricalCorrelationCard(df, metadata).render()
 with tab3:
     NumericalCategoricalCorrCard(df, metadata).render()
-
-# ------------------------------------------------------------------------------
-# 4. Relationship with Target Variable
-# ------------------------------------------------------------------------------
-st.subheader("Relationship with Target Variable")
-
-TargetCorrCard(df, metadata, target_var="readmitted").render()
