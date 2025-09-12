@@ -13,6 +13,19 @@ class NumericalCategoricalCorrCard:
         self.metadata = metadata
 
     def render(self):
+        with st.container(border=True):
+            self._render_summary_description()
+            self._plot_box_plot()
+
+    def _render_summary_description(self):
+        st.subheader("Relationship Between Numerical & Categorical Variables")
+        st.markdown(
+            """
+        <TODO: add summary here>
+        """
+        )
+
+    def _plot_box_plot(self):
         cat_feat_type = [FeatureType.ORDINAL, FeatureType.NOMINAL, FeatureType.BOOLEAN]
         numerical_feat_type = [FeatureType.CONTINUOUS, FeatureType.DISCRETE]
 
@@ -65,5 +78,7 @@ class NumericalCategoricalCorrCard:
                     y=cat_var,
                     x=num_var,
                     points="suspectedoutliers" if show_outliers else False,
+                    # color_discrete_sequence=["black", "gray"],
                 )
+                fig.update_yaxes(tickfont=dict(family="Arial Black", size=12))
                 st.plotly_chart(fig, use_container_width=True)
