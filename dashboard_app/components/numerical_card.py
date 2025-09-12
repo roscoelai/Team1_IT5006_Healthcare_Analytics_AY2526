@@ -117,7 +117,7 @@ class NumericalCard:
         fig.add_annotation(
             x=self.q1,
             y=0.3,
-            text=f"25%: {self.q1:,.2f}",
+            text=f"Q1: {self.q1:,.2f}",
             font=dict(size=12),
             showarrow=False,
             ax=-30,
@@ -135,7 +135,7 @@ class NumericalCard:
         fig.add_annotation(
             x=self.q3,
             y=0.3,
-            text=f"75%: {self.q3:,.2f}",
+            text=f"Q3: {self.q3:,.2f}",
             font=dict(size=12),
             showarrow=False,
             ax=-30,

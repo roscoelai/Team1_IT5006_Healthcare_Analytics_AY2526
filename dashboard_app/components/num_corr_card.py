@@ -111,6 +111,7 @@ class NumericalCorrelationCard:
 
     def _render_summary_description(self):
         # Describe the correlation analysis
+        st.subheader("Relationship Between Numerical Variables")
         st.markdown(
             f"""
             **Spearman correlation coefficient** is used to measure the correlation 

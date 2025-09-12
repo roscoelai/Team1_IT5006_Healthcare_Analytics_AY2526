@@ -53,7 +53,15 @@ class CategoricalCorrelationCard:
 
         st.plotly_chart(fig, use_container_width=True)
 
-    def render(self):
+    def _render_summary_description(self):
+        st.subheader("Relationship Between Categorical Variables")
+        st.markdown(
+            """
+            <TODO: add summary descriptions here>
+        """
+        )
 
-        st.subheader("Categorical Correlation Analysis")
-        self._plot_stacked_barchart()
+    def render(self):
+        with st.container(border=True):
+            self._render_summary_description()
+            self._plot_stacked_barchart()

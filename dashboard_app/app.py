@@ -19,32 +19,14 @@ def create_pages() -> list[st.Page]:
         icon="🏠",
         url_path="introduction",
     )
-    literature_review = st.Page(
-        os.path.join(BASE_PAGE_DIR, "literature_review.py"),
-        title="Literature Review",
-        icon="📚",
-        url_path="literature",
-    )
-    data_prepro = st.Page(
-        os.path.join(BASE_PAGE_DIR, "data_preprocessing.py"),
-        title="Data Preprocessing",
-        icon="🔧",
-        url_path="preprocessing",
-    )
     eda = st.Page(
         os.path.join(BASE_PAGE_DIR, "exploratory_analysis.py"),
         title="Exploratory Analysis",
         icon="🔍",
         url_path="eda",
     )
-    dashboard = st.Page(
-        os.path.join(BASE_PAGE_DIR, "dashboard.py"),
-        title="Dashboard",
-        icon="📊",
-        url_path="dashboard",
-    )
 
-    return [intro, literature_review, data_prepro, eda, dashboard]
+    return [intro, eda]
 
 
 def main():

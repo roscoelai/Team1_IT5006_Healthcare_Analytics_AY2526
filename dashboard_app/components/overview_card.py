@@ -45,7 +45,7 @@ class OverviewCard:
             st.metric(label="Number of Columns", value=f"{self.data.shape[1]:,}")
 
     def _render_data_overview(self):
-        with st.container(border=True):
+        with st.container(border=True, height="stretch"):
             st.markdown(
                 f"""
             **Variable Types**  
@@ -56,8 +56,8 @@ class OverviewCard:
             Boolean: {self.num_boolean}  
 
             **Numerical**  
-            Continuous: {self.num_continuous}
-            Discrete: {self.num_discrete}
+            Continuous: {self.num_continuous}  
+            Discrete: {self.num_discrete}  
 
             **Others**  
             Identifier: {self.num_identifier}
@@ -80,7 +80,9 @@ class OverviewCard:
         # Data Overview
         with st.container():
             self._render_key_metrics()
-
+            st.info(
+                """🔍 Use the dropdown below to select the subset of data to view. """
+            )
             option = st.selectbox(
                 "Select subset of raw data to view:",
                 options=[member.value for member in DataSubset],
@@ -91,6 +93,3 @@ class OverviewCard:
                 self._render_sample_data(option)
             with col1:
                 self._render_data_overview()
-
-            with st.expander("View Data Dictionary"):
-                st.write(self.metadata)
