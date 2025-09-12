@@ -82,8 +82,15 @@ st.info(
 col1, col2 = st.columns([2, 5])
 
 # TODO: too much duplicate code. refactor later.
-st.session_state["feature_type_filter"] = metadata["feature_type"].unique().tolist()
-st.session_state["category_filter"] = metadata["category"].unique().tolist()
+feature_type_options = metadata["feature_type"].unique().tolist()
+category_options = metadata["category"].unique().tolist()
+
+st.session_state["feature_type_filter"] = st.session_state.get(
+    "feature_type_filter", feature_type_options
+)
+st.session_state["category_filter"] = st.session_state.get(
+    "category_filter", category_options
+)
 with col1:
     with st.container(border=True, height="stretch"):
 
@@ -114,7 +121,6 @@ with col1:
                     st.session_state["feature_type_filter"] = []
                     st.rerun()
 
-            feature_type_options = metadata["feature_type"].unique().tolist()
             feature_type_filter = []
             for option in feature_type_options:
                 checked = st.checkbox(
@@ -150,7 +156,6 @@ with col1:
                     st.session_state["category_filter"] = []
                     st.rerun()
 
-            category_options = metadata["category"].unique().tolist()
             category_filter = []
             for option in category_options:
                 checked = st.checkbox(
