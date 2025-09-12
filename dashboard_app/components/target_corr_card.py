@@ -6,8 +6,7 @@ import plotly.graph_objects as go
 
 from constants.feature_type import FeatureType
 
-# bar plot groupby for numerical <-> ordinal grp by categorical, plot mean of numerical
-# box plot for numerical <-> ordinal
+# TODO: remove the unnecessary df copies - slows down the app
 
 
 class TargetCorrCard:
@@ -109,8 +108,7 @@ class TargetCorrCard:
                     marker=dict(line=dict(color="black", width=1)),
                     textposition="auto",
                     texttemplate="%{y:.2f}",
-                    # Bold the labels
-                    textfont_color="black",
+                    textfont_color="white",
                     textfont_size=16,
                 )
                 fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
@@ -162,7 +160,6 @@ class TargetCorrCard:
                         {"<30": "YES", ">30": "YES"}
                     )
 
-                    # Bar chart showing % of readmission by race. only need to plot "YES" bars
                     values = (
                         pd.crosstab(
                             index=race_df["race"],
@@ -180,7 +177,6 @@ class TargetCorrCard:
                         title="Readmission Rates for Different Racial Groups",
                         text=values["text"],
                         range_y=[0, 1],
-                        # relabel x and y axis
                         labels={"x": "Race", "y": "Readmission Rate"},
                     )
                     fig.update_traces(
@@ -228,13 +224,42 @@ class TargetCorrCard:
                 st.subheader("Frequent Inpatient Visits and Readmission Rates")
                 st.markdown(
                     """
-                    - Patients with a history of frequent inpatient visits are more likely to be readmitted.  
+                    - Patients with a history of frequent inpatient visits are associated with higher readmission rates.  
                     - This trend is particularly pronounced for short-term (<30 days) readmissions.  
                     - This suggest repeated hospitalizations may indicate chronic or poorly managed health conditions.  
                     """
                 )
             with col2:
-                pass
+                readmitted_order = ["<30", ">30", "NO"]
+                readmitted_color = ["indianred", "orange", "lightgreen"]
+
+                mean_proc = (
+                    self.df.groupby("readmitted")["number_inpatient"]
+                    .mean()
+                    .reset_index()
+                )
+
+                fig = px.bar(
+                    mean_proc,
+                    title="Average Number of Inpatient Visits by Readmission Status",
+                    x="readmitted",
+                    y="number_inpatient",
+                    color="readmitted",
+                    category_orders={"readmitted": readmitted_order},
+                    color_discrete_sequence=readmitted_color,
+                    labels={"number_inpatient": "Average Number of Inpatient Visits"},
+                )
+                fig.update_traces(
+                    marker=dict(line=dict(color="black", width=1)),
+                    textposition="auto",
+                    texttemplate="%{y:.2f}",
+                    textfont_color="white",
+                    textfont_size=16,
+                )
+                fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
+                fig.update_layout(showlegend=False)
+                st.plotly_chart(fig, use_container_width=True)
+
         # with st.expander("Discharge Disposition Vs Readmission"):
         with st.container(border=True):
             col1, col2 = st.columns([2, 5])
@@ -242,12 +267,13 @@ class TargetCorrCard:
                 st.subheader("Patients discharged to home have lower readmission rates")
                 st.markdown(
                     """
-                    - Patients discharged to home are less likely to be readmitted compared to those discharged to other facilities.
-                    - This suggests that pateints requiring further care or rehabilitation may have more complex health needs, leading to higher readmission rates.  
+                    - Patients discharged to home are associated with lower rates of readmission compared to those discharged to other facilities.
+                    - This suggests that patients requiring further care or rehabilitation may have more complex health needs, leading to higher readmission rates.  
                     """
                 )
             with col2:
                 pass
+
         # with st.expander("Emergency Visits Vs Readmission"):
         with st.container(border=True):
             col1, col2 = st.columns([2, 5])
@@ -300,7 +326,7 @@ class TargetCorrCard:
                         y=avg_emerg,
                         line_dash="dash",
                         line_color="white",
-                        annotation_text=f"Average Number of Emergency Visits: {avg_emerg:.2f}",
+                        annotation_text=f"Average Emergency Visits: {avg_emerg:.2f}",
                         annotation_position="top right",
                     )
 
@@ -318,7 +344,7 @@ class TargetCorrCard:
 
                 # bin to 0, [1-2], [3-5], [6-10], [11-20], >20
                 bins = [-1, 0, 2, 5, 10, 20, emerg_df["number_emergency"].max()]
-                labels = ["0", "1-2", "3-5", "6-10", "11-20", ">20"]
+                labels = ["0", "[1-2]", "[3-5]", "[6-10]", "[11-20]", ">20"]
                 emerg_df["emerg_bin"] = pd.cut(
                     emerg_df["number_emergency"], bins=bins, labels=labels
                 )
@@ -337,11 +363,10 @@ class TargetCorrCard:
                     y="count",
                     title="Distribution of Emergency Visits",
                     labels={
-                        "index": "Number of Emergency Visits",
-                        "emerg_bin": "Count",
+                        "count": "Number of Patient Encounters",
+                        "emerg_bin": "Number of Emergency Visits (binned)",
                     },
                 )
-                # add text labels
                 fig.update_traces(
                     marker=dict(color="indianred", line=dict(color="black", width=1)),
                     text=[
@@ -351,6 +376,20 @@ class TargetCorrCard:
                     textposition="auto",
                     textfont_color="white",
                     textfont_size=16,
+                )
+                fig.add_annotation(
+                    x=0.2,
+                    y=0.95,
+                    xref="paper",
+                    yref="paper",
+                    text=f"The distribution is heavily right-skewed with a <b>mean of {emerg_df['number_emergency'].mean():.2f}</b> visits."
+                    "<br><b>88.8%</b> of encounters had no emergency visits."
+                    "<br>Only <b>0.4%</b> of encounters had more than 5 emergency visits.",
+                    showarrow=False,
+                    font=dict(color="black", size=14),
+                    bgcolor="white",
+                    bordercolor="black",
+                    borderpad=5,
                 )
                 fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
                 st.plotly_chart(fig, use_container_width=True, key="emergency_target")
@@ -382,7 +421,60 @@ class TargetCorrCard:
                     """
                 )
             with col2:
-                pass
+                hba1c_df = self.df.copy()
+                hba1c_df["readmitted"] = hba1c_df["readmitted"].replace(
+                    {"<30": "YES", ">30": "YES"}
+                )
+                hba1c_order = ["Norm", ">7", ">8"]
+                hba1c_opacity = [0.6, 0.8, 1.0]
+                values = (
+                    pd.crosstab(
+                        index=hba1c_df["A1Cresult"],
+                        columns=hba1c_df["readmitted"],
+                        normalize="index",
+                    )
+                    .reset_index()
+                    .rename(columns={0: "percentage"})
+                )
+                values["text"] = values["YES"].apply(lambda x: f"{x:.1%}")
+                values = values.sort_values(by="YES", ascending=True)
+                fig = px.bar(
+                    x=values["A1Cresult"],
+                    y=values["YES"],
+                    title="Readmission Rates by HbA1c Levels",
+                    text=values["text"],
+                    range_y=[0, 1],
+                    # relabel x and y axis
+                    labels={"x": "HbA1c Levels", "y": "Readmission Rate"},
+                    category_orders={"A1Cresult": hba1c_order},
+                    opacity=hba1c_opacity,
+                )
+                fig.update_traces(
+                    marker=dict(color="red", line=dict(color="black", width=1)),
+                    textposition="auto",
+                    textfont_size=16,
+                )
+                fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
+                fig.add_annotation(
+                    x=0.05,
+                    y=0.95,
+                    xref="paper",
+                    yref="paper",
+                    text="Brighter red indicates higher HbA1c levels."
+                    "<br>Patients with poor glycemic control associated <br>with higher readmission rates.",
+                    showarrow=False,
+                    font=dict(color="black", size=14),
+                    bgcolor="white",
+                    bordercolor="black",
+                    borderpad=5,
+                )
+                with st.container(
+                    horizontal=True,
+                    horizontal_alignment="center",
+                    vertical_alignment="center",
+                    height="stretch",
+                ):
+                    st.plotly_chart(fig, use_container_width=True)
 
         # with st.expander("Number of Procedures Vs Readmission"):
         with st.container(border=True):
@@ -398,11 +490,38 @@ class TargetCorrCard:
                     """
                 )
             with col2:
-                pass
+                readmitted_order = ["<30", ">30", "NO"]
+                readmitted_color = ["indianred", "orange", "lightgreen"]
+
+                mean_proc = (
+                    self.df.groupby("readmitted")["num_procedures"].mean().reset_index()
+                )
+
+                fig = px.bar(
+                    mean_proc,
+                    title="Average Number of Procedures by Readmission Status",
+                    x="readmitted",
+                    y="num_procedures",
+                    color="readmitted",
+                    category_orders={"readmitted": readmitted_order},
+                    color_discrete_sequence=readmitted_color,
+                    labels={"num_procedures": "Average Number of Procedures"},
+                )
+                fig.update_traces(
+                    marker=dict(line=dict(color="black", width=1)),
+                    textposition="auto",
+                    texttemplate="%{y:.2f}",
+                    textfont_color="white",
+                    textfont_size=16,
+                )
+                fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
+                fig.update_layout(showlegend=False)
+                st.plotly_chart(fig, use_container_width=True)
 
     def _plot_boxplot(self):
         readmitted_order = ["<30", ">30", "NO"]
-        readmitted_color = ["#FF5733", "#FFA500", "#006400"]
+        # readmitted_color = ["#FF5733", "#FFA500", "#006400"]
+        readmitted_color = ["indianred", "orange", "lightgreen"]
         numerical_cols = self.metadata[
             self.metadata["feature_type"].isin(
                 [FeatureType.CONTINUOUS, FeatureType.DISCRETE]
