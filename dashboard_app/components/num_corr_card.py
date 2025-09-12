@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
-from dashboard_app.constants.feature_type import FeatureType
+from constants.feature_type import FeatureType
 
 
 class NumericalCorrelationCard:

@@ -1,10 +1,13 @@
 """Main entry point for the streamlit interactive dashboard"""
 
 import os
+import sys
 import streamlit as st
 import pandas as pd
 
 BASE_PAGE_DIR = "./pages"
+
+sys.path.append(os.path.dirname(__file__))
 
 
 @st.cache_data

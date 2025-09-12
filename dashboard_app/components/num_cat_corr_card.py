@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.subplots as sp
 import plotly.graph_objects as go
 
-from dashboard_app.constants.feature_type import FeatureType
+from constants.feature_type import FeatureType
 
 
 class NumericalCategoricalCorrCard:

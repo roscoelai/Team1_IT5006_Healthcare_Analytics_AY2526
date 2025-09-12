@@ -5,7 +5,7 @@ from functools import partial
 import pandas as pd
 import streamlit as st
 
-from dashboard_app.components.overview_card import OverviewCard
+from components.overview_card import OverviewCard
 
 
 # TODO: move this to shared folder
@@ -82,6 +82,8 @@ st.info(
 col1, col2 = st.columns([2, 5])
 
 # TODO: too much duplicate code. refactor later.
+st.session_state["feature_type_filter"] = metadata["feature_type"].unique().tolist()
+st.session_state["category_filter"] = metadata["category"].unique().tolist()
 with col1:
     with st.container(border=True, height="stretch"):
 

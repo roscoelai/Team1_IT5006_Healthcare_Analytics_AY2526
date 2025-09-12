@@ -5,7 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from scipy.stats import gaussian_kde
 
-from dashboard_app.constants.feature_type import FeatureType
+from constants.feature_type import FeatureType
 
 
 class NumericalCard:

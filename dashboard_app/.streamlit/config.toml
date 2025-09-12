@@ -1,5 +1,2 @@
 [theme]
 base = "dark"
-
-[env]
-PYTHONPATH = "."

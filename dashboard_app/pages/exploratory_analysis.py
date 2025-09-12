@@ -1,19 +1,21 @@
 import os
+import sys
 from enum import Enum
 
 import pandas as pd
 import streamlit as st
 import plotly.express as px
 
-from dashboard_app.components.categorical_card import CategoricalCard
-from dashboard_app.components.numerical_card import NumericalCard
-from dashboard_app.components.identifier_card import IdentifierCard
-from dashboard_app.components.num_corr_card import NumericalCorrelationCard
-from dashboard_app.components.cat_corr_card import CategoricalCorrelationCard
-from dashboard_app.components.num_cat_corr_card import NumericalCategoricalCorrCard
-from dashboard_app.components.target_corr_card import TargetCorrCard
-from dashboard_app.components.overview_card import OverviewCard
-from dashboard_app.constants.feature_type import FeatureType
+
+from components.categorical_card import CategoricalCard
+from components.numerical_card import NumericalCard
+from components.identifier_card import IdentifierCard
+from components.num_corr_card import NumericalCorrelationCard
+from components.cat_corr_card import CategoricalCorrelationCard
+from components.num_cat_corr_card import NumericalCategoricalCorrCard
+from components.target_corr_card import TargetCorrCard
+from components.overview_card import OverviewCard
+from constants.feature_type import FeatureType
 
 
 # ---
