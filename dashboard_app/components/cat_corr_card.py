@@ -55,11 +55,6 @@ class CategoricalCorrelationCard:
 
     def _render_summary_description(self):
         st.subheader("Relationship Between Categorical Variables")
-        st.markdown(
-            """
-            <TODO: add summary descriptions here>
-        """
-        )
 
     def render(self):
         with st.container(border=True):
