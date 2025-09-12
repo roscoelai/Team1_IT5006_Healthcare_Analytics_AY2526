@@ -114,6 +114,9 @@ class TargetCorrCard:
                 [FeatureType.NOMINAL, FeatureType.ORDINAL, FeatureType.BOOLEAN]
             )
         ]["variable"]
+
+        # exclude target variable and medications
+        categorical_cols = categorical_cols[categorical_cols != self.target_var]
         medication_vars = self.metadata[self.metadata["category"] == "Medications"][
             "variable"
         ]
@@ -192,11 +195,10 @@ class TargetCorrCard:
         with st.container(border=True):
             self._render_summary_description()
 
-            tab1, tab2, tab3 = st.tabs(
+            tab1, tab2 = st.tabs(
                 [
                     "Target <-> Numerical",
                     "Target <-> Categorical (Excl Medications)",
-                    "Target <-> Categorical (Medications)",
                 ]
             )
 

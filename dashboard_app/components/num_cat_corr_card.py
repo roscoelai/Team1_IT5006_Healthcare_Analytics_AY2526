@@ -19,11 +19,6 @@ class NumericalCategoricalCorrCard:
 
     def _render_summary_description(self):
         st.subheader("Relationship Between Numerical & Categorical Variables")
-        st.markdown(
-            """
-        <TODO: add summary here>
-        """
-        )
 
     def _plot_box_plot(self):
         cat_feat_type = [FeatureType.ORDINAL, FeatureType.NOMINAL, FeatureType.BOOLEAN]

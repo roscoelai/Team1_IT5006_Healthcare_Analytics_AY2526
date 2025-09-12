@@ -126,7 +126,6 @@ class NumericalCorrelationCard:
 
         """
         )
-        st.error("TODO!: add some insights gained")
 
     def render(self):
         with st.container(border=True):
