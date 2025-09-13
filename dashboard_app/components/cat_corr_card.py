@@ -47,6 +47,11 @@ class CategoricalCorrelationCard:
             text="text",
             barmode="stack",
         )
+        fig.update_layout(margin=dict(t=30, b=30, l=0, r=0))
+        fig.update_traces(
+            textposition="inside",
+            textfont_size=14,
+        )
 
         st.plotly_chart(fig, use_container_width=True)
 

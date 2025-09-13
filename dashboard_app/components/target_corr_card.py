@@ -18,6 +18,8 @@ class TargetCorrCard:
         self.df = data
         self.metadata = metadata
         self.target_var = target_var
+        self.readmitted_order = ["<30", ">30", "NO"]
+        self.readmitted_color = [Color.DANGER, Color.WARNING, Color.SUCCESS]
 
     def _render_summary_description(self):
         st.subheader(f"**Target Variable**: {self.target_var}")
@@ -26,9 +28,6 @@ class TargetCorrCard:
         ].values[0]
         st.markdown(f"{target_desc}")
         st.markdown("Key findings from the analysis:")
-
-        readmitted_order = ["<30", ">30", "NO"]
-        readmitted_color = [Color.DANGER, Color.WARNING, Color.SUCCESS]
 
         # with st.expander("Age Vs Readmission"):
         with st.container(border=True):
@@ -60,8 +59,8 @@ class TargetCorrCard:
                     color="readmitted",
                     text="text",
                     barmode="stack",
-                    category_orders={"readmitted": readmitted_order},
-                    color_discrete_sequence=readmitted_color,
+                    category_orders={"readmitted": self.readmitted_order},
+                    color_discrete_sequence=self.readmitted_color,
                 )
                 fig.update_traces(
                     marker=dict(line=dict(color=Color.BORDER, width=1)),
@@ -103,8 +102,8 @@ class TargetCorrCard:
                     x="readmitted",
                     y="time_in_hospital",
                     color="readmitted",
-                    category_orders={"readmitted": readmitted_order},
-                    color_discrete_sequence=readmitted_color,
+                    category_orders={"readmitted": self.readmitted_order},
+                    color_discrete_sequence=self.readmitted_color,
                     labels={"time_in_hospital": "Average Time in Hospital (days)"},
                 )
                 fig.update_traces(
@@ -158,8 +157,8 @@ class TargetCorrCard:
                         x="readmitted",
                         y="num_medications",
                         color="readmitted",
-                        category_orders={"readmitted": readmitted_order},
-                        color_discrete_sequence=readmitted_color,
+                        category_orders={"readmitted": self.readmitted_order},
+                        color_discrete_sequence=self.readmitted_color,
                         labels={"num_medications": "Average Number of Medications"},
                     )
                     fig.update_traces(
@@ -381,8 +380,8 @@ class TargetCorrCard:
                     x="readmitted",
                     y="number_inpatient",
                     color="readmitted",
-                    category_orders={"readmitted": readmitted_order},
-                    color_discrete_sequence=readmitted_color,
+                    category_orders={"readmitted": self.readmitted_order},
+                    color_discrete_sequence=self.readmitted_color,
                     labels={"number_inpatient": "Average Number of Inpatient Visits"},
                 )
                 fig.update_traces(
@@ -500,8 +499,8 @@ class TargetCorrCard:
                         x="readmitted",
                         y="number_emergency",
                         color="readmitted",
-                        category_orders={"readmitted": readmitted_order},
-                        color_discrete_sequence=readmitted_color,
+                        category_orders={"readmitted": self.readmitted_order},
+                        color_discrete_sequence=self.readmitted_color,
                         labels={
                             "number_emergency": "Average Number of Emergency Visits"
                         },
@@ -703,7 +702,7 @@ class TargetCorrCard:
                     xref="paper",
                     yref="paper",
                     text="Certain primary diagnosis categories "
-                    "<br>are linked to higher readmission rates.",
+                    "<br>are linked to higher than average readmission rates.",
                     showarrow=False,
                     font=dict(color=Color.ANNOTATION_TEXT, size=14),
                     bgcolor=Color.ANNOTATION_BG,
@@ -818,8 +817,8 @@ class TargetCorrCard:
                     x="readmitted",
                     y="num_lab_procedures",
                     color="readmitted",
-                    category_orders={"readmitted": readmitted_order},
-                    color_discrete_sequence=readmitted_color,
+                    category_orders={"readmitted": self.readmitted_order},
+                    color_discrete_sequence=self.readmitted_color,
                     labels={"num_lab_procedures": "Average Number of Lab Procedures"},
                 )
                 fig.update_traces(
@@ -833,8 +832,6 @@ class TargetCorrCard:
                 st.plotly_chart(fig, use_container_width=True)
 
     def _plot_boxplot(self):
-        readmitted_order = ["<30", ">30", "NO"]
-        readmitted_color = [Color.DANGER, Color.WARNING, Color.SUCCESS]
         numerical_cols = self.metadata[
             self.metadata["feature_type"].isin(
                 [FeatureType.CONTINUOUS, FeatureType.DISCRETE]
@@ -844,7 +841,7 @@ class TargetCorrCard:
             "Choose numerical variables",
             numerical_cols,
             key="target_num_var",
-            default=numerical_cols,
+            default=numerical_cols.tolist()[0],
         )
 
         if not num_var:
@@ -863,7 +860,7 @@ class TargetCorrCard:
                 key="target_cols_per_row",
                 horizontal=True,
                 label_visibility="collapsed",
-                index=1,
+                index=0,
             )
             show_outliers = st.toggle(
                 "Show Outliers", value=False, key="target_show_outliers"
@@ -888,8 +885,8 @@ class TargetCorrCard:
                         y=self.target_var,
                         points="suspectedoutliers" if show_outliers else False,
                         color="readmitted",
-                        category_orders={self.target_var: readmitted_order},
-                        color_discrete_sequence=readmitted_color,
+                        category_orders={self.target_var: self.readmitted_order},
+                        color_discrete_sequence=self.readmitted_color,
                     )
                     fig.update_yaxes(tickfont=dict(family="Arial Black", size=12))
                     fig.update_layout(
@@ -973,11 +970,18 @@ class TargetCorrCard:
                         color=self.target_var,
                         text="text",
                         barmode="group",
-                        category_orders={self.target_var: readmitted_order},
-                        color_discrete_sequence=readmitted_color,
+                        category_orders={self.target_var: self.readmitted_order},
+                        color_discrete_sequence=self.readmitted_color,
                         range_y=[0, 1],
                     )
                     fig.update_yaxes(tickfont=dict(family="Arial Black", size=12))
+                    fig.update_layout(margin=dict(t=30, b=30, l=0, r=0))
+                    fig.update_traces(
+                        textposition="auto",
+                        textfont_size=14,
+                        marker=dict(line=dict(color=Color.BORDER, width=1)),
+                        textfont_color=Color.TEXT,
+                    )
                     st.plotly_chart(
                         fig, key=f"target_bar_{cat_var}", use_container_width=True
                     )

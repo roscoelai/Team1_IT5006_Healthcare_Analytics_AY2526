@@ -71,7 +71,7 @@ class NumericalCorrelationCard:
                     {second_desc}
                 """
             )
-        jitter = st.slider("**Jitter amount**", 0.0, 1.0, 0.5)
+        jitter = st.slider("**Jitter amount**", 0.0, 0.3, 0.01)
         data_jittered = self.data[self.numerical_features].copy()
         for col in self.numerical_features:
             data_jittered[col] = add_jitter(data_jittered[col], scale=jitter)
