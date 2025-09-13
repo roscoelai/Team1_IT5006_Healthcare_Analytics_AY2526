@@ -6,18 +6,13 @@ import pandas as pd
 import streamlit as st
 
 from components.overview_card import OverviewCard
+from components.datadict_card import DataDictCard
+from utils.dataloader import DataLoader
 
+# Load data required for the page
+df = DataLoader.get_data()
+metadata = DataLoader.get_metadata()
 
-# TODO: move this to shared folder
-@st.cache_data
-def load_csv_data(path: str) -> pd.DataFrame:
-    return pd.read_csv(path)
-
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-data_dir = os.path.join(current_dir, "../data")
-df = load_csv_data(os.path.join(data_dir, "diabetic_data.csv"))
-metadata = load_csv_data(os.path.join(data_dir, "diabetes_datadict.csv"))
 
 st.title("Introduction")
 
@@ -60,9 +55,7 @@ st.markdown(
 
     """
 )
-
 OverviewCard(df, metadata).render()
-
 
 # ------------------------------------------------------------------------------
 # Data Dictionary
@@ -70,119 +63,11 @@ OverviewCard(df, metadata).render()
 st.subheader("Data Dictionary")
 st.markdown(
     """
-    The data dictionary provides metadata about each variable in the dataset, 
-    including its name, type, category, and description.  
+    The data dictionary provides metadata about each variable in the dataset,
+    including its name, type, category, and description.
     """
 )
-st.info(
-    """🔍 Use the filters on the left to explore specific feature types or categories. 
-    Click on the column headers to sort by a specific variable."""
-)
-
-col1, col2 = st.columns([2, 5])
-
-# TODO: too much duplicate code. refactor later.
-feature_type_options = metadata["feature_type"].unique().tolist()
-category_options = metadata["category"].unique().tolist()
-
-st.session_state["feature_type_filter"] = st.session_state.get(
-    "feature_type_filter", feature_type_options
-)
-st.session_state["category_filter"] = st.session_state.get(
-    "category_filter", category_options
-)
-with col1:
-    with st.container(border=True, height="stretch"):
-
-        st.subheader("**Filter**")
-
-        # Filter by feature type
-        with st.expander("By Feature Type"):
-            with st.container(horizontal=True, horizontal_alignment="right"):
-                select_all_feat = st.button(
-                    label="Select All",
-                    key="select_all_feat",
-                    type="tertiary",
-                    use_container_width=False,
-                )
-
-                clear_all_feat = st.button(
-                    label="Clear All",
-                    key="clear_all_feat",
-                    type="tertiary",
-                    use_container_width=False,
-                )
-                if select_all_feat:
-                    st.session_state["feature_type_filter"] = (
-                        metadata["feature_type"].unique().tolist()
-                    )
-                    st.rerun()
-                if clear_all_feat:
-                    st.session_state["feature_type_filter"] = []
-                    st.rerun()
-
-            feature_type_filter = []
-            for option in feature_type_options:
-                checked = st.checkbox(
-                    option,
-                    value=option in st.session_state.get("feature_type_filter", []),
-                    key=f"feature_type_{option}",
-                )
-                if checked:
-                    feature_type_filter.append(option)
-            st.session_state["feature_type_filter"] = feature_type_filter
-
-        # Filter by category
-        with st.expander("By Feature Category"):
-            with st.container(horizontal=True, horizontal_alignment="right"):
-                select_all_cat = st.button(
-                    label="Select All",
-                    key="select_all_cat",
-                    type="tertiary",
-                    use_container_width=False,
-                )
-                clear_all_feature_types = st.button(
-                    label="Clear All",
-                    key="dclear_all_feature_types",
-                    type="tertiary",
-                    use_container_width=False,
-                )
-                if select_all_cat:
-                    st.session_state["category_filter"] = (
-                        metadata["category"].unique().tolist()
-                    )
-                    st.rerun()
-                if clear_all_feature_types:
-                    st.session_state["category_filter"] = []
-                    st.rerun()
-
-            category_filter = []
-            for option in category_options:
-                checked = st.checkbox(
-                    option,
-                    value=option in st.session_state.get("category_filter", []),
-                    key=f"category_{option}",
-                )
-                if checked:
-                    category_filter.append(option)
-            st.session_state["category_filter"] = category_filter
-
-with col2:
-    datadict = metadata[
-        metadata["feature_type"].isin(st.session_state.get("feature_type_filter", []))
-        & metadata["category"].isin(st.session_state.get("category_filter", []))
-    ]
-    datadict.reset_index(inplace=True, drop=True)
-    datadict.index += 1  # Start index from 1 instead of 0
-    datadict = datadict.drop(columns=["value_counts", "data_type"])
-    filtered = len(st.session_state.get("feature_type_filter", [])) != len(
-        feature_type_options
-    ) or len(st.session_state.get("category_filter", [])) != len(category_options)
-    st.write(
-        f'<i>Total variables: {datadict.shape[0]} {"(filtered)" if filtered else ""}</i>',
-        unsafe_allow_html=True,
-    )
-    st.write(datadict)
+DataDictCard(metadata).render()
 
 # ------------------------------------------------------------------------------
 # 5. Footer

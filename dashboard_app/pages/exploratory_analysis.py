@@ -7,7 +7,6 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
-
 from components.categorical_card import CategoricalCard
 from components.numerical_card import NumericalCard
 from components.identifier_card import IdentifierCard
@@ -18,19 +17,11 @@ from components.target_corr_card import TargetCorrCard
 from components.overview_card import OverviewCard
 from constants.feature_type import FeatureType
 from constants.color import Color
+from utils.dataloader import DataLoader
 
-
-# ---
-# TODO: move this to shared folder
-@st.cache_data
-def load_csv_data(path: str) -> pd.DataFrame:
-    return pd.read_csv(path)
-
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-data_dir = os.path.join(current_dir, "../data")
-df = load_csv_data(os.path.join(data_dir, "diabetic_data.csv"))
-metadata = load_csv_data(os.path.join(data_dir, "diabetes_datadict.csv"))
+# Load data required for the page
+df = DataLoader.get_data()
+metadata = DataLoader.get_metadata()
 
 # ---
 # TODO: check if all the .copy() are necessary - not needed if not modifying the df
@@ -251,6 +242,7 @@ with st.container(border=True):
                 textposition="auto",
                 textinfo="percent+label+value",
                 textfont_size=14,
+                textfont_color=Color.TEXT,
             )
             fig.update_layout(
                 showlegend=False,
