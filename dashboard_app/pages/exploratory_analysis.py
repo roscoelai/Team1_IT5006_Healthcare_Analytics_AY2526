@@ -240,8 +240,8 @@ with st.container(border=True):
                 title="Proportion of Patients with Multiple Encounters",
                 color=["Multiple Encounters", "Single Encounter"],
                 color_discrete_map={
-                    "Multiple Encounters": "indianred",
-                    "Single Encounter": "rgb(74, 117, 240)",
+                    "Multiple Encounters": Color.SECONDARY,
+                    "Single Encounter": Color.PRIMARY,
                 },
                 height=450,
             )

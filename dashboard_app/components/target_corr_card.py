@@ -796,29 +796,31 @@ class TargetCorrCard:
             col1, col2 = st.columns([2, 5])
             with col1:
                 st.subheader(
-                    "More Procedures During Stay Associated with Higher Readmission Rates"
+                    "More Lab Procedures During Stay Associated with Higher Readmission Rates"
                 )
                 st.markdown(
                     """
-                    - Patients undergoing multiple procedures during their hospital stay tend to have higher readmission rates.  
+                    - Patients undergoing multiple lab procedures during their hospital stay tend to have higher readmission rates.  
                     - This suggests that more complex medical interventions may indicate severe health conditions, leading to increased risk of readmission.  
                     """
                 )
             with col2:
 
                 mean_proc = (
-                    self.df.groupby("readmitted")["num_procedures"].mean().reset_index()
+                    self.df.groupby("readmitted")["num_lab_procedures"]
+                    .mean()
+                    .reset_index()
                 )
 
                 fig = px.bar(
                     mean_proc,
-                    title="Average Number of Procedures by Readmission Status",
+                    title="Average Number of Lab Procedures by Readmission Status",
                     x="readmitted",
-                    y="num_procedures",
+                    y="num_lab_procedures",
                     color="readmitted",
                     category_orders={"readmitted": readmitted_order},
                     color_discrete_sequence=readmitted_color,
-                    labels={"num_procedures": "Average Number of Procedures"},
+                    labels={"num_lab_procedures": "Average Number of Lab Procedures"},
                 )
                 fig.update_traces(
                     marker=dict(line=dict(color=Color.BORDER, width=1)),
@@ -890,7 +892,10 @@ class TargetCorrCard:
                         color_discrete_sequence=readmitted_color,
                     )
                     fig.update_yaxes(tickfont=dict(family="Arial Black", size=12))
-                    fig.update_layout(showlegend=False)
+                    fig.update_layout(
+                        showlegend=False, margin=dict(t=30, b=30, l=0, r=0)
+                    )
+                    fig.update_traces(boxmean=True)
                     st.plotly_chart(
                         fig, key=f"target_box_{num_var}", use_container_width=True
                     )
