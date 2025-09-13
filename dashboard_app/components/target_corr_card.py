@@ -139,7 +139,142 @@ class TargetCorrCard:
                     """
                 )
             with col2:
-                pass
+                tab1, tab2, tab3 = st.tabs(
+                    [
+                        "Number of Medications",
+                        "Diabetes Medications",
+                        "Medication Changes",
+                    ]
+                )
+                with tab1:
+                    mean_hosp = (
+                        self.df.groupby("readmitted")["num_medications"]
+                        .mean()
+                        .reset_index()
+                    )
+                    fig = px.bar(
+                        mean_hosp,
+                        title="Average Number of Medications by Readmission Status",
+                        x="readmitted",
+                        y="num_medications",
+                        color="readmitted",
+                        category_orders={"readmitted": readmitted_order},
+                        color_discrete_sequence=readmitted_color,
+                        labels={"num_medications": "Average Number of Medications"},
+                    )
+                    fig.update_traces(
+                        marker=dict(line=dict(color=Color.BORDER, width=1)),
+                        textposition="auto",
+                        texttemplate="%{y:.2f}",
+                        textfont_color=Color.TEXT,
+                        textfont_size=16,
+                    )
+                    fig.update_layout(
+                        margin=dict(t=50, b=50, l=0, r=0), showlegend=False
+                    )
+                    st.plotly_chart(
+                        fig, use_container_width=True, use_container_height=True
+                    )
+
+                with tab2:
+                    diabmed_df = self.df.copy()
+                    diabmed_df["readmitted"] = diabmed_df["readmitted"].replace(
+                        {"<30": "YES", ">30": "YES"}
+                    )
+                    values = (
+                        pd.crosstab(
+                            index=diabmed_df["diabetesMed"],
+                            columns=diabmed_df["readmitted"],
+                            normalize="index",
+                        )
+                        .reset_index()
+                        .rename(columns={0: "percentage"})
+                    )
+                    values["text"] = values["YES"].apply(lambda x: f"{x:.1%}")
+                    values = values.sort_values(by="YES", ascending=True)
+                    fig = px.bar(
+                        values,
+                        x="diabetesMed",
+                        y="YES",
+                        title="Readmission Rates by Diabetes Medication Usage",
+                        text=values["text"],
+                        range_y=[0, 1],
+                        labels={
+                            "diabetesMed": "Diabetes Medication Usage",
+                            "YES": "Readmission Rate",
+                        },
+                        color="diabetesMed",
+                        color_discrete_sequence=[Color.SUCCESS, Color.DANGER],
+                        category_orders={"diabetesMed": ["No", "Yes"]},
+                    )
+                    fig.update_traces(
+                        marker=dict(line=dict(color=Color.BORDER, width=1)),
+                        textposition="auto",
+                        textfont_color=Color.TEXT,
+                        textfont_size=16,
+                    )
+                    avg_readmit_rate = (self.df["readmitted"] != "NO").mean()
+                    fig.update_layout(
+                        margin=dict(t=50, b=50, l=0, r=0), showlegend=False
+                    )
+                    fig.add_hline(
+                        y=avg_readmit_rate,
+                        line_dash="dash",
+                        line_color=Color.TEXT,
+                        annotation_text=f"Average Readmission Rate: {avg_readmit_rate:.1%}",
+                        annotation_position="top left",
+                    )
+                    st.plotly_chart(fig, use_container_width=True, key="diabmed_target")
+
+                with tab3:
+                    medchg_df = self.df.copy()
+                    medchg_df["readmitted"] = medchg_df["readmitted"].replace(
+                        {"<30": "YES", ">30": "YES"}
+                    )
+                    values = (
+                        pd.crosstab(
+                            index=medchg_df["change"],
+                            columns=medchg_df["readmitted"],
+                            normalize="index",
+                        )
+                        .reset_index()
+                        .rename(columns={0: "percentage"})
+                    )
+                    values["text"] = values["YES"].apply(lambda x: f"{x:.1%}")
+                    values = values.sort_values(by="YES", ascending=True)
+                    fig = px.bar(
+                        values,
+                        x="change",
+                        y="YES",
+                        title="Readmission Rates by Medication Changes",
+                        text=values["text"],
+                        range_y=[0, 1],
+                        labels={
+                            "change": "Medication Changes",
+                            "YES": "Readmission Rate",
+                        },
+                        color="change",
+                        color_discrete_sequence=[Color.SUCCESS, Color.DANGER],
+                        category_orders={"change": ["No", "Ch"]},
+                    )
+                    fig.update_traces(
+                        marker=dict(line=dict(color=Color.BORDER, width=1)),
+                        textposition="auto",
+                        textfont_color=Color.TEXT,
+                        textfont_size=16,
+                    )
+                    avg_readmit_rate = (self.df["readmitted"] != "NO").mean()
+                    fig.update_layout(
+                        margin=dict(t=50, b=50, l=0, r=0), showlegend=False
+                    )
+                    fig.add_hline(
+                        y=avg_readmit_rate,
+                        line_dash="dash",
+                        line_color=Color.TEXT,
+                        annotation_text=f"Average Readmission Rate: {avg_readmit_rate:.1%}",
+                        annotation_position="top left",
+                    )
+                    st.plotly_chart(fig, use_container_width=True, key="medchg_target")
 
         # with st.expander("Race Vs Readmission"):
         with st.container(border=True):
@@ -257,8 +392,7 @@ class TargetCorrCard:
                     textfont_color=Color.TEXT,
                     textfont_size=16,
                 )
-                fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
-                fig.update_layout(showlegend=False)
+                fig.update_layout(margin=dict(t=50, b=50, l=0, r=0), showlegend=False)
                 st.plotly_chart(fig, use_container_width=True)
 
         # with st.expander("Discharge Disposition Vs Readmission"):
