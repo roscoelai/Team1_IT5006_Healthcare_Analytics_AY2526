@@ -28,7 +28,7 @@ class TargetCorrCard:
         with st.container(border=True):
             col1, col2 = st.columns([2, 5])
             with col1:
-                st.subheader("Older patients have higher readmission rates")
+                st.subheader("Older Patients Linked to Higher Readmission Rates")
                 st.markdown(
                     """
                     - Those aged 70 and above particularly prone to short-term (<30 days) readmissions.  
@@ -78,7 +78,7 @@ class TargetCorrCard:
             col1, col2 = st.columns([2, 5])
             with col1:
                 st.subheader(
-                    "Longer hospital stays are associated with higher readmission rates"
+                    "Longer Hospital Stays Associated with Higher Readmission Rates"
                 )
                 st.markdown(
                     """
@@ -264,7 +264,9 @@ class TargetCorrCard:
         with st.container(border=True):
             col1, col2 = st.columns([2, 5])
             with col1:
-                st.subheader("Patients discharged to home have lower readmission rates")
+                st.subheader(
+                    "Patients Discharged to Home Linked to Lower Readmission Rates"
+                )
                 st.markdown(
                     """
                     - Patients discharged to home are associated with lower rates of readmission compared to those discharged to other facilities.
@@ -272,7 +274,64 @@ class TargetCorrCard:
                     """
                 )
             with col2:
-                pass
+                home_df = self.df.copy()
+                mapping = {x: "Other" for x in range(2, 29)}
+                mapping[1] = "Home"
+                home_df["discharge_disposition_id"] = home_df[
+                    "discharge_disposition_id"
+                ].replace(mapping)
+                home_df["readmitted"] = home_df["readmitted"].replace(
+                    {"<30": "YES", ">30": "YES"}
+                )
+
+                values = (
+                    pd.crosstab(
+                        index=home_df["discharge_disposition_id"],
+                        columns=home_df["readmitted"],
+                        normalize="index",
+                    )
+                    .reset_index()
+                    .rename(columns={0: "percentage"})
+                )
+                values["text"] = values["YES"].apply(lambda x: f"{x:.1%}")
+                values = values.sort_values(by="YES", ascending=True)
+                fig = px.bar(
+                    x=values["discharge_disposition_id"],
+                    y=values["YES"],
+                    title="Readmission Rates by Discharge Disposition",
+                    text=values["text"],
+                    range_y=[0, 1],
+                    labels={"x": "Discharge Disposition", "y": "Readmission Rate"},
+                )
+                fig.update_traces(
+                    marker=dict(color="indianred", line=dict(color="black", width=1)),
+                    textposition="auto",
+                    textfont_size=16,
+                )
+                fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
+                fig.add_annotation(
+                    x=0.05,
+                    y=0.95,
+                    xref="paper",
+                    yref="paper",
+                    text="Patients discharged to home have lower readmission rates."
+                    "<br>Those discharged to other facilities may have more complex health needs.",
+                    showarrow=False,
+                    font=dict(color="black", size=14),
+                    bgcolor="white",
+                    bordercolor="black",
+                    borderpad=5,
+                )
+
+                avg_readmit_rate = (self.df["readmitted"] != "NO").mean()
+                fig.add_hline(
+                    y=avg_readmit_rate,
+                    line_dash="dash",
+                    line_color="white",
+                    annotation_text=f"Average Readmission Rate: {avg_readmit_rate:.1%}",
+                )
+
+                st.plotly_chart(fig, use_container_width=True, key="discharge_target")
 
         # with st.expander("Emergency Visits Vs Readmission"):
         with st.container(border=True):
@@ -398,7 +457,7 @@ class TargetCorrCard:
         with st.container(border=True):
             col1, col2 = st.columns([2, 5])
             with col1:
-                st.subheader("Comorbidities Influence Readmission Rates")
+                st.subheader("Comorbidity and Readmission Rates")
                 st.markdown(
                     """
                     - Patients admitted for circulatory and endocrine conditions have higher readmission rates.  
@@ -520,7 +579,6 @@ class TargetCorrCard:
 
     def _plot_boxplot(self):
         readmitted_order = ["<30", ">30", "NO"]
-        # readmitted_color = ["#FF5733", "#FFA500", "#006400"]
         readmitted_color = ["indianred", "orange", "lightgreen"]
         numerical_cols = self.metadata[
             self.metadata["feature_type"].isin(
