@@ -5,6 +5,7 @@ import plotly.subplots as sp
 import plotly.graph_objects as go
 
 from constants.feature_type import FeatureType
+from constants.color import Color
 
 
 class NumericalCategoricalCorrCard:
@@ -50,7 +51,7 @@ class NumericalCategoricalCorrCard:
                 key="num_cols_per_row",
                 horizontal=True,
                 label_visibility="collapsed",
-                index=1,
+                index=0,
             )
             show_outliers = st.toggle("Show Outliers", value=False)
 
@@ -73,7 +74,11 @@ class NumericalCategoricalCorrCard:
                     y=cat_var,
                     x=num_var,
                     points="suspectedoutliers" if show_outliers else False,
-                    # color_discrete_sequence=["black", "gray"],
                 )
-                fig.update_yaxes(tickfont=dict(family="Arial Black", size=12))
+                fig.update_layout(margin=dict(t=30, b=30, l=0, r=0))
+                fig.update_yaxes(tickfont=dict(size=14))
+                fig.update_traces(
+                    marker_color=Color.PRIMARY,
+                    boxmean=True,
+                )
                 st.plotly_chart(fig, use_container_width=True)

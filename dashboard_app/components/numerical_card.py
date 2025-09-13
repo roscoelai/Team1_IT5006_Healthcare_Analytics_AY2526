@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from scipy.stats import gaussian_kde
 
 from constants.feature_type import FeatureType
+from constants.color import Color
 
 
 class NumericalCard:
@@ -148,8 +149,21 @@ class NumericalCard:
             font=dict(size=12),
             showarrow=False,
         )
+        fig.add_annotation(
+            x=self.mean,
+            y=-0.3,
+            text=f"Mean: {self.mean:,.2f}",
+            font=dict(size=12),
+            showarrow=False,
+        )
 
-        # Show the boxplot
+        fig.update_traces(
+            marker_color=Color.SECONDARY,
+            marker_line_color=Color.BORDER,
+            marker_line_width=2,
+            boxmean=True,
+        )
+        fig.update_layout(margin=dict(t=50, b=50, l=0, r=0), showlegend=False)
         st.plotly_chart(fig)
 
     def _plot_histogram(self):
@@ -158,17 +172,14 @@ class NumericalCard:
         x_vals = np.linspace(self.min_val, self.max_val, 1000)
         kde_vals = kde(x_vals)
 
-        # Create figure
         fig = go.Figure()
-
-        # Add histogram
         fig.add_trace(
             go.Histogram(
                 x=self.data,
                 histnorm="probability density",
                 name="Histogram",
                 opacity=0.6,
-                marker_color="lightblue",
+                marker_color=Color.PRIMARY,
             )
         )
 
@@ -211,5 +222,14 @@ class NumericalCard:
             width=800,
             height=300,
         )
+
+        fig.update_traces(
+            textposition="auto",
+            textfont_size=16,
+            textfont_color=Color.TEXT,
+            marker=dict(line=dict(color=Color.BORDER, width=2)),
+            marker_color=Color.PRIMARY,
+        )
+        fig.update_layout(margin=dict(t=50, b=50, l=0, r=0), showlegend=False)
 
         st.plotly_chart(fig)

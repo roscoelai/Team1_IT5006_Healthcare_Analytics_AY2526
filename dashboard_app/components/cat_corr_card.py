@@ -6,9 +6,6 @@ from scipy.stats import chi2_contingency, contingency
 
 from constants.feature_type import FeatureType
 
-# TODO: need at least two types of visualisation? one for overiew and another
-# interactive one for deep dive
-
 
 class CategoricalCorrelationCard:
 

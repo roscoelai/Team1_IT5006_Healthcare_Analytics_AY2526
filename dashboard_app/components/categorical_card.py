@@ -3,6 +3,7 @@ import streamlit as st
 import plotly.express as px
 
 from constants.feature_type import FeatureType
+from constants.color import Color
 
 
 class CategoricalCard:
@@ -100,12 +101,21 @@ class CategoricalCard:
         fig = px.bar(
             x=category_counts.index,
             y=category_counts.values,
-            labels={"x": "Categories", "y": "Count"},
+            labels={"x": self.variable_name, "y": "Count"},
             title=f"Distribution of {self.variable_name}",
             text=column_text,
             width=800,
             height=300,
         )
+
+        fig.update_traces(
+            textposition="auto",
+            textfont_size=14,
+            textfont_color=Color.TEXT,
+            marker_color=Color.PRIMARY,
+        )
+
+        fig.update_layout(margin=dict(t=40, b=40, l=0, r=0))
         st.plotly_chart(fig)
 
     def _plot_pie_chart(self):
@@ -122,5 +132,10 @@ class CategoricalCard:
         fig.update_layout(
             showlegend=False,
             margin=dict(t=40, b=40, l=0, r=0),
+        )
+        fig.update_traces(
+            marker=dict(colors=[Color.PRIMARY, Color.SECONDARY]),
+            textfont_size=14,
+            textfont_color=Color.TEXT,
         )
         st.plotly_chart(fig)

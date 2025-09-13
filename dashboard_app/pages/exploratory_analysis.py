@@ -17,6 +17,7 @@ from components.num_cat_corr_card import NumericalCategoricalCorrCard
 from components.target_corr_card import TargetCorrCard
 from components.overview_card import OverviewCard
 from constants.feature_type import FeatureType
+from constants.color import Color
 
 
 # ---
@@ -96,8 +97,8 @@ with st.container(border=True):
             texttemplate="%{text:.2f}%",
             textposition="auto",
             textfont_size=14,
-            textfont_color="white",
-            marker_color="indianred",
+            textfont_color=Color.TEXT,
+            marker_color=Color.DANGER,
         )
 
         # Draw a vertical line seperating weight from other features
@@ -105,11 +106,11 @@ with st.container(border=True):
             x=0.5,
             line_width=3,
             line_dash="dash",
-            line_color="white",
+            line_color=Color.TEXT,
         )
 
         fig.data[0].marker.color = [
-            "indianred" if var == "weight" else "steelblue"
+            Color.DANGER if var == "weight" else Color.MUTED
             for var in missing_df[missing_df["missing_values"] > 0]["variable"]
         ]
         # fig.data[0].marker.opacity = [
@@ -129,9 +130,9 @@ with st.container(border=True):
             yref="paper",
             text="<b>   Weight</b> will be dropped.<br>Remaining features will be handled<br>during preprocessing.",
             showarrow=False,
-            font=dict(color="black", size=14),
-            bgcolor="white",
-            bordercolor="black",
+            font=dict(color=Color.ANNOTATION_TEXT, size=14),
+            bgcolor=Color.ANNOTATION_BG,
+            bordercolor=Color.BORDER,
             borderpad=5,
         )
 
@@ -191,13 +192,13 @@ with st.container(border=True):
             # use background gradient
             return [
                 (
-                    "background-color: indianred"
+                    f"background-color: {Color.DANGER}"
                     if float(v.strip("%")) >= 95
                     else (
-                        "background-color: orange"
+                        f"background-color: {Color.WARNING}"
                         if float(v.strip("%")) >= 90
                         else (
-                            "background-color: yellow"
+                            f"background-color: {Color.HIGHLIGHT}"
                             if float(v.strip("%")) >= 80
                             else ""
                         )
@@ -240,13 +241,13 @@ with st.container(border=True):
                 color=["Multiple Encounters", "Single Encounter"],
                 color_discrete_map={
                     "Multiple Encounters": "indianred",
-                    "Single Encounter": "steelblue",
+                    "Single Encounter": "rgb(74, 117, 240)",
                 },
                 height=450,
             )
 
             fig.update_traces(
-                marker=dict(line=dict(color="black", width=1)),
+                marker=dict(line=dict(color=Color.BORDER, width=1)),
                 textposition="auto",
                 textinfo="percent+label+value",
                 textfont_size=14,
@@ -257,8 +258,6 @@ with st.container(border=True):
             )
             st.plotly_chart(fig, use_container_width=True)
         with tab2:
-            # Distribution of number of encounters for patients with multiple encounters
-
             # bin the number of encounters
             encounter_bins = [2, 3, 5, 10, 20]
             encounter_labels = ["2", "3-4", "5-9", "10-19", "20+"]
@@ -284,12 +283,12 @@ with st.container(border=True):
             fig.update_traces(
                 textposition="auto",
                 textfont_size=14,
-                textfont_color="white",
-                marker_color="indianred",
+                textfont_color=Color.TEXT,
             )
 
             fig.data[0].marker.color = [
-                "indianred" if i == 0 else "gray" for i in range(len(binned_counts))
+                Color.DANGER if i == 0 else Color.MUTED
+                for i in range(len(binned_counts))
             ]
 
             fig.add_annotation(
@@ -299,9 +298,9 @@ with st.container(border=True):
                 yref="paper",
                 text=f"Of the <b>{multiple_encounters:,} patients</b> with multiple encounters, <br>the majority <b>({binned_perc[0]:.1%}) had only 2 encounters.</b>",
                 showarrow=False,
-                font=dict(color="black", size=14),
-                bgcolor="white",
-                bordercolor="black",
+                font=dict(color=Color.ANNOTATION_TEXT, size=14),
+                bgcolor=Color.ANNOTATION_BG,
+                bordercolor=Color.BORDER,
                 borderpad=5,
             )
 
@@ -430,7 +429,7 @@ with st.container(border=True):
                 text=age_text,
                 textposition="auto",
                 textfont_size=16,
-                marker_color="steelblue",
+                marker_color=Color.PRIMARY,
             )
             fig.update_layout(
                 yaxis=dict(range=[0, age_df["age"].value_counts().max() * 1.1]),
@@ -442,13 +441,13 @@ with st.container(border=True):
                 x=2.5,
                 line_width=3,
                 line_dash="dash",
-                line_color="white",
+                line_color=Color.TEXT,
             )
             fig.add_vline(
                 x=7.5,
                 line_width=3,
                 line_dash="dash",
-                line_color="white",
+                line_color=Color.TEXT,
             )
 
             fig.add_annotation(
@@ -458,9 +457,9 @@ with st.container(border=True):
                 yref="paper",
                 text="More encounters involves<br> older patients, peaking<br> at [70-80) age group.",
                 showarrow=False,
-                font=dict(color="black", size=14),
-                bgcolor="white",
-                bordercolor="black",
+                font=dict(color=Color.ANNOTATION_TEXT, size=14),
+                bgcolor=Color.ANNOTATION_BG,
+                bordercolor=Color.BORDER,
                 borderpad=5,
             )
             fig.add_annotation(
@@ -470,9 +469,9 @@ with st.container(border=True):
                 yref="paper",
                 text="Relatively low encounters<br> involving patients below 30",
                 showarrow=False,
-                font=dict(color="black", size=14),
-                bgcolor="white",
-                bordercolor="black",
+                font=dict(color=Color.ANNOTATION_TEXT, size=14),
+                bgcolor=Color.ANNOTATION_BG,
+                bordercolor=Color.BORDER,
                 borderpad=5,
             )
             fig.add_annotation(
@@ -482,9 +481,9 @@ with st.container(border=True):
                 yref="paper",
                 text="Lower encounters<br> for patients above 80,<br> likely due to mortality",
                 showarrow=False,
-                font=dict(color="black", size=14),
-                bgcolor="white",
-                bordercolor="black",
+                font=dict(color=Color.ANNOTATION_TEXT, size=14),
+                bgcolor=Color.ANNOTATION_BG,
+                bordercolor=Color.BORDER,
                 borderpad=5,
             )
 
@@ -501,15 +500,15 @@ with st.container(border=True):
                 height=450,
                 color="gender",
                 color_discrete_map={
-                    "Female": "indianred",
-                    "Male": "steelblue",
+                    "Male": Color.PRIMARY,
+                    "Female": Color.SECONDARY,
                 },
             )
             fig.update_traces(
                 textinfo="percent+label+value",
                 textposition="auto",
                 textfont_size=16,
-                marker=dict(line=dict(color="black", width=2)),
+                marker=dict(line=dict(color=Color.BORDER, width=2)),
             )
             fig.update_layout(
                 showlegend=False,
@@ -528,7 +527,7 @@ with st.container(border=True):
                 textinfo="percent entry+label",
                 textposition="middle center",
                 textfont_size=16,
-                marker=dict(line=dict(color="black", width=2)),
+                marker=dict(line=dict(color=Color.BORDER, width=2)),
             )
             # show % in hover
             fig.data[0].hovertemplate = (
@@ -562,8 +561,7 @@ with st.container(border=True):
             for count, percent in zip(count.values, category_perc.values)
         ]
 
-        # color based on readmitted value
-        color_map = {"NO": "green", ">30": "gray", "<30": "gray"}
+        color_map = {"NO": Color.SUCCESS, ">30": Color.MUTED, "<30": Color.MUTED}
         colors = [color_map[val] for val in category_perc.index]
 
         # Bar chart y showing count, different colors for each bar
@@ -580,7 +578,7 @@ with st.container(border=True):
         fig.update_traces(
             textposition="auto",
             textfont_size=16,
-            textfont_color="white",
+            textfont_color=Color.TEXT,
         )
 
         # Highlight the "NO" bar with an annotation
@@ -591,11 +589,11 @@ with st.container(border=True):
             showarrow=True,
             arrowhead=2,
             arrowsize=1,
-            arrowcolor="green",
-            bgcolor="white",
-            bordercolor="black",
+            arrowcolor=Color.SUCCESS,
+            bgcolor=Color.ANNOTATION_BG,
+            bordercolor=Color.BORDER,
             borderpad=5,
-            font=dict(color="black", size=14),
+            font=dict(color=Color.ANNOTATION_TEXT, size=14),
             ax=0,
             ay=-40,
         )

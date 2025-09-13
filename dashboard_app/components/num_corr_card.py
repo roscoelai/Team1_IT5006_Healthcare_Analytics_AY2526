@@ -4,6 +4,7 @@ import streamlit as st
 import plotly.express as px
 
 from constants.feature_type import FeatureType
+from constants.color import Color
 
 
 class NumericalCorrelationCard:
@@ -83,6 +84,7 @@ class NumericalCorrelationCard:
             height=600,
             width=400,
         )
+        fig.update_traces(marker_color=Color.PRIMARY)
         st.plotly_chart(fig, use_container_width=True)
 
     def _plot_correlation_matrix(self):

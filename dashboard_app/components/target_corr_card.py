@@ -7,6 +7,7 @@ import plotly.subplots as sp
 import plotly.graph_objects as go
 
 from constants.feature_type import FeatureType
+from constants.color import Color
 
 # TODO: remove the unnecessary df copies - slows down the app
 
@@ -25,6 +26,9 @@ class TargetCorrCard:
         ].values[0]
         st.markdown(f"{target_desc}")
         st.markdown("Key findings from the analysis:")
+
+        readmitted_order = ["<30", ">30", "NO"]
+        readmitted_color = [Color.DANGER, Color.WARNING, Color.SUCCESS]
 
         # with st.expander("Age Vs Readmission"):
         with st.container(border=True):
@@ -48,8 +52,6 @@ class TargetCorrCard:
                 )
                 values["text"] = values["Proportion"].apply(lambda x: f"{x:.1%}")
 
-                readmitted_order = ["<30", ">30", "NO"]
-                readmitted_color = ["indianred", "orange", "lightgreen"]
                 fig = px.bar(
                     values,
                     title="Proportion of Readmission by Age Group",
@@ -62,10 +64,10 @@ class TargetCorrCard:
                     color_discrete_sequence=readmitted_color,
                 )
                 fig.update_traces(
-                    marker=dict(line=dict(color="black", width=1)),
+                    marker=dict(line=dict(color=Color.BORDER, width=1)),
                     textposition="auto",
                     textfont_size=16,
-                    textfont_color="white",
+                    textfont_color=Color.TEXT,
                 )
                 fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
                 with st.container(
@@ -95,8 +97,6 @@ class TargetCorrCard:
                     .mean()
                     .reset_index()
                 )
-                readmitted_order = ["<30", ">30", "NO"]
-                readmitted_color = ["indianred", "orange", "lightgreen"]
                 fig = px.bar(
                     mean_hosp,
                     title="Average Time in Hospital by Readmission Status",
@@ -108,13 +108,13 @@ class TargetCorrCard:
                     labels={"time_in_hospital": "Average Time in Hospital (days)"},
                 )
                 fig.update_traces(
-                    marker=dict(line=dict(color="black", width=1)),
+                    marker=dict(line=dict(color=Color.BORDER, width=1)),
                     textposition="auto",
                     texttemplate="%{y:.2f}",
-                    textfont_color="white",
+                    textfont_color=Color.TEXT,
                     textfont_size=16,
                 )
-                fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
+                fig.update_layout(margin=dict(t=50, b=50, l=0, r=0), showlegend=False)
                 with st.container(
                     horizontal=True,
                     horizontal_alignment="center",
@@ -184,7 +184,7 @@ class TargetCorrCard:
                     )
                     fig.update_traces(
                         marker=dict(
-                            color="steelblue", line=dict(color="black", width=1)
+                            color=Color.PRIMARY, line=dict(color=Color.BORDER, width=1)
                         ),
                         textposition="auto",
                         textfont_size=14,
@@ -196,7 +196,7 @@ class TargetCorrCard:
                     fig.add_hline(
                         y=avg_readmit_rate,
                         line_dash="dash",
-                        line_color="white",
+                        line_color=Color.TEXT,
                         annotation_text=f"Average Readmission Rate: {avg_readmit_rate:.1%}",
                         annotation_position="top right",
                     )
@@ -212,7 +212,7 @@ class TargetCorrCard:
                         textinfo="percent entry+label",
                         textposition="middle center",
                         textfont_size=16,
-                        marker=dict(line=dict(color="black", width=2)),
+                        marker=dict(line=dict(color=Color.BORDER, width=2)),
                     )
                     # show % in hover
                     fig.data[0].hovertemplate = (
@@ -233,8 +233,6 @@ class TargetCorrCard:
                     """
                 )
             with col2:
-                readmitted_order = ["<30", ">30", "NO"]
-                readmitted_color = ["indianred", "orange", "lightgreen"]
 
                 mean_proc = (
                     self.df.groupby("readmitted")["number_inpatient"]
@@ -253,10 +251,10 @@ class TargetCorrCard:
                     labels={"number_inpatient": "Average Number of Inpatient Visits"},
                 )
                 fig.update_traces(
-                    marker=dict(line=dict(color="black", width=1)),
+                    marker=dict(line=dict(color=Color.BORDER, width=1)),
                     textposition="auto",
                     texttemplate="%{y:.2f}",
-                    textfont_color="white",
+                    textfont_color=Color.TEXT,
                     textfont_size=16,
                 )
                 fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
@@ -307,7 +305,9 @@ class TargetCorrCard:
                     labels={"x": "Discharge Disposition", "y": "Readmission Rate"},
                 )
                 fig.update_traces(
-                    marker=dict(color="steelblue", line=dict(color="black", width=1)),
+                    marker=dict(
+                        color=Color.PRIMARY, line=dict(color=Color.BORDER, width=1)
+                    ),
                     textposition="auto",
                     textfont_size=16,
                 )
@@ -320,9 +320,9 @@ class TargetCorrCard:
                     text="Patients discharged to home have lower readmission rates."
                     "<br>Those discharged to other facilities may have more complex health needs.",
                     showarrow=False,
-                    font=dict(color="black", size=14),
-                    bgcolor="white",
-                    bordercolor="black",
+                    font=dict(color=Color.ANNOTATION_TEXT, size=14),
+                    bgcolor=Color.ANNOTATION_BG,
+                    bordercolor=Color.BORDER,
                     borderpad=5,
                 )
 
@@ -330,7 +330,7 @@ class TargetCorrCard:
                 fig.add_hline(
                     y=avg_readmit_rate,
                     line_dash="dash",
-                    line_color="white",
+                    line_color=Color.TEXT,
                     annotation_text=f"Average Readmission Rate: {avg_readmit_rate:.1%}",
                 )
 
@@ -360,8 +360,6 @@ class TargetCorrCard:
                         .mean()
                         .reset_index()
                     )
-                    readmitted_order = ["<30", ">30", "NO"]
-                    readmitted_color = ["indianred", "orange", "lightgreen"]
                     fig = px.bar(
                         mean_emerg,
                         title="Average Number of Emergency Visits by Readmission Status",
@@ -375,19 +373,21 @@ class TargetCorrCard:
                         },
                     )
                     fig.update_traces(
-                        marker=dict(line=dict(color="black", width=1)),
+                        marker=dict(line=dict(color=Color.BORDER, width=1)),
                         textposition="auto",
                         texttemplate="%{y:.2f}",
-                        textfont_color="white",
+                        textfont_color=Color.TEXT,
                         textfont_size=16,
                     )
-                    fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
+                    fig.update_layout(
+                        margin=dict(t=50, b=50, l=0, r=0), showlegend=False
+                    )
 
                     avg_emerg = self.df["number_emergency"].mean()
                     fig.add_hline(
                         y=avg_emerg,
                         line_dash="dash",
-                        line_color="white",
+                        line_color=Color.TEXT,
                         annotation_text=f"Average Emergency Visits: {avg_emerg:.2f}",
                         annotation_position="top right",
                     )
@@ -430,13 +430,15 @@ class TargetCorrCard:
                     },
                 )
                 fig.update_traces(
-                    marker=dict(color="indianred", line=dict(color="black", width=1)),
+                    marker=dict(
+                        color=Color.PRIMARY, line=dict(color=Color.BORDER, width=1)
+                    ),
                     text=[
                         f"{c:,} ({p:.1%})"
                         for c, p in zip(bin_counts["count"], bin_counts["percent"])
                     ],
                     textposition="auto",
-                    textfont_color="white",
+                    textfont_color=Color.TEXT,
                     textfont_size=16,
                 )
                 fig.add_annotation(
@@ -448,9 +450,9 @@ class TargetCorrCard:
                     "<br><b>88.8%</b> of encounters had no emergency visits."
                     "<br>Only <b>0.4%</b> of encounters had more than 5 emergency visits.",
                     showarrow=False,
-                    font=dict(color="black", size=14),
-                    bgcolor="white",
-                    bordercolor="black",
+                    font=dict(color=Color.ANNOTATION_TEXT, size=14),
+                    bgcolor=Color.ANNOTATION_BG,
+                    bordercolor=Color.BORDER,
                     borderpad=5,
                 )
                 fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
@@ -547,7 +549,9 @@ class TargetCorrCard:
                     },
                 )
                 fig.update_traces(
-                    marker=dict(color="steelblue", line=dict(color="black", width=1)),
+                    marker=dict(
+                        color=Color.PRIMARY, line=dict(color=Color.BORDER, width=1)
+                    ),
                     textposition="auto",
                     textfont_size=16,
                 )
@@ -555,7 +559,7 @@ class TargetCorrCard:
                 fig.add_hline(
                     y=avg_readmit_rate,
                     line_dash="dash",
-                    line_color="white",
+                    line_color=Color.TEXT,
                     annotation_position="top left",
                     annotation_text=f"Average Readmission Rate: {avg_readmit_rate:.1%}",
                 )
@@ -567,9 +571,9 @@ class TargetCorrCard:
                     text="Certain primary diagnosis categories "
                     "<br>are linked to higher readmission rates.",
                     showarrow=False,
-                    font=dict(color="black", size=14),
-                    bgcolor="white",
-                    bordercolor="black",
+                    font=dict(color=Color.ANNOTATION_TEXT, size=14),
+                    bgcolor=Color.ANNOTATION_BG,
+                    bordercolor=Color.BORDER,
                     borderpad=5,
                 )
                 fig.update_layout(showlegend=False, margin=dict(t=50, b=50, l=0, r=0))
@@ -600,7 +604,7 @@ class TargetCorrCard:
                     {"<30": "YES", ">30": "YES"}
                 )
                 hba1c_order = [">8", ">7", "Norm"]
-                hba1c_color = ["indianred", "orange", "lightgreen"]
+                hba1c_color = [Color.DANGER, Color.WARNING, Color.SUCCESS]
                 values = (
                     pd.crosstab(
                         index=hba1c_df["A1Cresult"],
@@ -625,9 +629,9 @@ class TargetCorrCard:
                     color_discrete_sequence=hba1c_color,
                 )
                 fig.update_traces(
-                    marker=dict(line=dict(color="black", width=1)),
+                    marker=dict(line=dict(color=Color.BORDER, width=1)),
                     textposition="auto",
-                    textfont_color="white",
+                    textfont_color=Color.TEXT,
                     textfont_size=16,
                 )
                 fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
@@ -639,9 +643,9 @@ class TargetCorrCard:
                     text="Patients with poor glycemic control associated "
                     "<br>with higher readmission rates.",
                     showarrow=False,
-                    font=dict(color="black", size=14),
-                    bgcolor="white",
-                    bordercolor="black",
+                    font=dict(color=Color.ANNOTATION_TEXT, size=14),
+                    bgcolor=Color.ANNOTATION_BG,
+                    bordercolor=Color.BORDER,
                     borderpad=5,
                 )
                 fig.update_layout(showlegend=False, margin=dict(t=50, b=50, l=0, r=0))
@@ -667,8 +671,6 @@ class TargetCorrCard:
                     """
                 )
             with col2:
-                readmitted_order = ["<30", ">30", "NO"]
-                readmitted_color = ["indianred", "orange", "lightgreen"]
 
                 mean_proc = (
                     self.df.groupby("readmitted")["num_procedures"].mean().reset_index()
@@ -685,10 +687,10 @@ class TargetCorrCard:
                     labels={"num_procedures": "Average Number of Procedures"},
                 )
                 fig.update_traces(
-                    marker=dict(line=dict(color="black", width=1)),
+                    marker=dict(line=dict(color=Color.BORDER, width=1)),
                     textposition="auto",
                     texttemplate="%{y:.2f}",
-                    textfont_color="white",
+                    textfont_color=Color.TEXT,
                     textfont_size=16,
                 )
                 fig.update_layout(showlegend=False, margin=dict(t=50, b=50, l=0, r=0))
@@ -696,7 +698,7 @@ class TargetCorrCard:
 
     def _plot_boxplot(self):
         readmitted_order = ["<30", ">30", "NO"]
-        readmitted_color = ["indianred", "orange", "lightgreen"]
+        readmitted_color = [Color.DANGER, Color.WARNING, Color.SUCCESS]
         numerical_cols = self.metadata[
             self.metadata["feature_type"].isin(
                 [FeatureType.CONTINUOUS, FeatureType.DISCRETE]
@@ -825,8 +827,6 @@ class TargetCorrCard:
                         )
                     )
                     values["text"] = values["Proportion"].apply(lambda x: f"{x:.1%}")
-                    readmitted_order = ["<30", ">30", "NO"]
-                    readmitted_color = ["indianred", "orange", "lightgreen"]
                     fig = px.bar(
                         values,
                         x=cat_var,
