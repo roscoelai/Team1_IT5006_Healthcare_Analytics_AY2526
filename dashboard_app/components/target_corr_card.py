@@ -599,8 +599,8 @@ class TargetCorrCard:
                 st.subheader("Primary Diagnosis Category and Readmission Rates")
                 st.markdown(
                     """
-                    - Patients admitted for certain mediacal conditions are associated with higher readmission rates.  
-                    - This underscores the impact of comorbidities on readmission risk.  
+                    - Patients admitted for certain medical conditions (e.g. Blood Disease, External Injury and Respiratory Conditions) are associated with higher readmission rates.
+                    - This underscores the impact of comorbidities on readmission risk.
                     """
                 )
             with col2:
@@ -609,7 +609,7 @@ class TargetCorrCard:
                 def mapping(icd_9: str) -> str:
 
                     if icd_9.startswith("V") or icd_9.startswith("E"):
-                        return "External Causes"
+                        return "External Injury"
 
                     # extract the numeric part before the decimal point
                     icd_9_main = re.match(r"^(\d{1,3})", icd_9)
