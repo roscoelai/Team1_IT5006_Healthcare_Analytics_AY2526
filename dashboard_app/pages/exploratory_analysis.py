@@ -192,13 +192,13 @@ with st.container(border=True):
             # use background gradient
             return [
                 (
-                    f"background-color: {Color.DANGER}"
+                    f"background-color: {Color.DANGER.value}"
                     if float(v.strip("%")) >= 95
                     else (
-                        f"background-color: {Color.WARNING}"
+                        f"background-color: {Color.WARNING.value}"
                         if float(v.strip("%")) >= 90
                         else (
-                            f"background-color: {Color.HIGHLIGHT}"
+                            f"background-color: {Color.HIGHLIGHT.value}"
                             if float(v.strip("%")) >= 80
                             else ""
                         )
