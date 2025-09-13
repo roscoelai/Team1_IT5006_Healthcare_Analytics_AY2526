@@ -1,3 +1,5 @@
+import re
+
 import pandas as pd
 import streamlit as st
 import plotly.express as px
@@ -62,7 +64,8 @@ class TargetCorrCard:
                 fig.update_traces(
                     marker=dict(line=dict(color="black", width=1)),
                     textposition="auto",
-                    textfont_size=14,
+                    textfont_size=16,
+                    textfont_color="white",
                 )
                 fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
                 with st.container(
@@ -181,7 +184,7 @@ class TargetCorrCard:
                     )
                     fig.update_traces(
                         marker=dict(
-                            color="indianred", line=dict(color="black", width=1)
+                            color="steelblue", line=dict(color="black", width=1)
                         ),
                         textposition="auto",
                         textfont_size=14,
@@ -304,7 +307,7 @@ class TargetCorrCard:
                     labels={"x": "Discharge Disposition", "y": "Readmission Rate"},
                 )
                 fig.update_traces(
-                    marker=dict(color="indianred", line=dict(color="black", width=1)),
+                    marker=dict(color="steelblue", line=dict(color="black", width=1)),
                     textposition="auto",
                     textfont_size=16,
                 )
@@ -457,15 +460,127 @@ class TargetCorrCard:
         with st.container(border=True):
             col1, col2 = st.columns([2, 5])
             with col1:
-                st.subheader("Comorbidity and Readmission Rates")
+                st.subheader("Primary Diagnosis Category and Readmission Rates")
                 st.markdown(
                     """
-                    - Patients admitted for circulatory and endocrine conditions have higher readmission rates.  
+                    - Patients admitted for certain mediacal conditions are associated with higher readmission rates.  
                     - This underscores the impact of comorbidities on readmission risk.  
                     """
                 )
             with col2:
-                pass
+                pri_diag_df = self.df.copy()
+
+                def mapping(icd_9: str) -> str:
+
+                    if icd_9.startswith("V") or icd_9.startswith("E"):
+                        return "External Causes"
+
+                    # extract the numeric part before the decimal point
+                    icd_9_main = re.match(r"^(\d{1,3})", icd_9)
+                    if not icd_9_main:
+                        return "Unknown"
+
+                    match int(icd_9_main.group()):
+                        case x if 1 <= x <= 139:
+                            return "Infectious"
+                        case x if 140 <= x <= 239:
+                            return "Neoplasms"
+                        case x if 240 <= x <= 279:
+                            return "Endocrine"
+                        case x if 280 <= x <= 289:
+                            return "Blood"
+                        case x if 290 <= x <= 319:
+                            return "Mental"
+                        case x if 320 <= x <= 389:
+                            return "Nervous"
+                        case x if 390 <= x <= 459:
+                            return "Circulatory"
+                        case x if 460 <= x <= 519:
+                            return "Respiratory"
+                        case x if 520 <= x <= 579:
+                            return "Digestive"
+                        case x if 580 <= x <= 629:
+                            return "Genitourinary"
+                        case x if 630 <= x <= 679:
+                            return "Pregnancy"
+                        case x if 680 <= x <= 709:
+                            return "Skin"
+                        case x if 710 <= x <= 739:
+                            return "Musculoskeletal"
+                        case x if 740 <= x <= 759:
+                            return "Congenital"
+                        case x if 760 <= x <= 779:
+                            return "Perinatal"
+                        case x if 780 <= x <= 799:
+                            return "Symptoms"
+                        case x if 800 <= x <= 999:
+                            return "Injury"
+                        case _:
+                            return "Other"
+
+                pri_diag_df["diag_1"] = pri_diag_df["diag_1"].apply(mapping)
+                pri_diag_df["readmitted"] = pri_diag_df["readmitted"].replace(
+                    {"<30": "YES", ">30": "YES"}
+                )
+
+                values = (
+                    pd.crosstab(
+                        index=pri_diag_df["diag_1"],
+                        columns=pri_diag_df["readmitted"],
+                        normalize="index",
+                    )
+                    .reset_index()
+                    .rename(columns={0: "percentage"})
+                )
+                values["text"] = values["YES"].apply(lambda x: f"{x:.1%}")
+                values = values.sort_values(by="YES", ascending=True)
+                fig = px.bar(
+                    values,
+                    x="diag_1",
+                    y="YES",
+                    title="Readmission Rates by Primary Diagnosis Category",
+                    text=values["text"],
+                    range_y=[0, 1],
+                    labels={
+                        "diag_1": "Primary Diagnosis Category",
+                        "YES": "Readmission Rate",
+                    },
+                )
+                fig.update_traces(
+                    marker=dict(color="steelblue", line=dict(color="black", width=1)),
+                    textposition="auto",
+                    textfont_size=16,
+                )
+                avg_readmit_rate = (self.df["readmitted"] != "NO").mean()
+                fig.add_hline(
+                    y=avg_readmit_rate,
+                    line_dash="dash",
+                    line_color="white",
+                    annotation_position="top left",
+                    annotation_text=f"Average Readmission Rate: {avg_readmit_rate:.1%}",
+                )
+                fig.add_annotation(
+                    x=0.05,
+                    y=0.95,
+                    xref="paper",
+                    yref="paper",
+                    text="Certain primary diagnosis categories "
+                    "<br>are linked to higher readmission rates.",
+                    showarrow=False,
+                    font=dict(color="black", size=14),
+                    bgcolor="white",
+                    bordercolor="black",
+                    borderpad=5,
+                )
+                fig.update_layout(showlegend=False, margin=dict(t=50, b=50, l=0, r=0))
+                with st.container(
+                    horizontal=True,
+                    horizontal_alignment="center",
+                    vertical_alignment="center",
+                    height="stretch",
+                ):
+                    st.plotly_chart(fig, use_container_width=True)
+
         # with st.expander("HbA1c Level Vs Readmission"):
         with st.container(border=True):
             col1, col2 = st.columns([2, 5])
@@ -484,8 +599,8 @@ class TargetCorrCard:
                 hba1c_df["readmitted"] = hba1c_df["readmitted"].replace(
                     {"<30": "YES", ">30": "YES"}
                 )
-                hba1c_order = ["Norm", ">7", ">8"]
-                hba1c_opacity = [0.6, 0.8, 1.0]
+                hba1c_order = [">8", ">7", "Norm"]
+                hba1c_color = ["indianred", "orange", "lightgreen"]
                 values = (
                     pd.crosstab(
                         index=hba1c_df["A1Cresult"],
@@ -498,19 +613,21 @@ class TargetCorrCard:
                 values["text"] = values["YES"].apply(lambda x: f"{x:.1%}")
                 values = values.sort_values(by="YES", ascending=True)
                 fig = px.bar(
-                    x=values["A1Cresult"],
-                    y=values["YES"],
+                    values,
+                    x="A1Cresult",
+                    y="YES",
                     title="Readmission Rates by HbA1c Levels",
                     text=values["text"],
                     range_y=[0, 1],
-                    # relabel x and y axis
-                    labels={"x": "HbA1c Levels", "y": "Readmission Rate"},
+                    labels={"A1Cresult": "HbA1c Levels", "YES": "Readmission Rate"},
+                    color="A1Cresult",
                     category_orders={"A1Cresult": hba1c_order},
-                    opacity=hba1c_opacity,
+                    color_discrete_sequence=hba1c_color,
                 )
                 fig.update_traces(
-                    marker=dict(color="red", line=dict(color="black", width=1)),
+                    marker=dict(line=dict(color="black", width=1)),
                     textposition="auto",
+                    textfont_color="white",
                     textfont_size=16,
                 )
                 fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
@@ -519,14 +636,15 @@ class TargetCorrCard:
                     y=0.95,
                     xref="paper",
                     yref="paper",
-                    text="Brighter red indicates higher HbA1c levels."
-                    "<br>Patients with poor glycemic control associated <br>with higher readmission rates.",
+                    text="Patients with poor glycemic control associated "
+                    "<br>with higher readmission rates.",
                     showarrow=False,
                     font=dict(color="black", size=14),
                     bgcolor="white",
                     bordercolor="black",
                     borderpad=5,
                 )
+                fig.update_layout(showlegend=False, margin=dict(t=50, b=50, l=0, r=0))
                 with st.container(
                     horizontal=True,
                     horizontal_alignment="center",
@@ -573,8 +691,7 @@ class TargetCorrCard:
                     textfont_color="white",
                     textfont_size=16,
                 )
-                fig.update_layout(margin=dict(t=50, b=50, l=0, r=0))
-                fig.update_layout(showlegend=False)
+                fig.update_layout(showlegend=False, margin=dict(t=50, b=50, l=0, r=0))
                 st.plotly_chart(fig, use_container_width=True)
 
     def _plot_boxplot(self):
@@ -709,7 +826,7 @@ class TargetCorrCard:
                     )
                     values["text"] = values["Proportion"].apply(lambda x: f"{x:.1%}")
                     readmitted_order = ["<30", ">30", "NO"]
-                    readmitted_color = ["#FF5733", "#CCCC00", "#98FB98"]
+                    readmitted_color = ["indianred", "orange", "lightgreen"]
                     fig = px.bar(
                         values,
                         x=cat_var,
