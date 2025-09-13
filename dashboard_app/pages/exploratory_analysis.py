@@ -430,7 +430,7 @@ with st.container(border=True):
                 text=age_text,
                 textposition="auto",
                 textfont_size=16,
-                marker_color="indianred",
+                marker_color="steelblue",
             )
             fig.update_layout(
                 yaxis=dict(range=[0, age_df["age"].value_counts().max() * 1.1]),
