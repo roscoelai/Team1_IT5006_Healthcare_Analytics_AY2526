@@ -4,10 +4,7 @@ import streamlit as st
 import plotly.express as px
 from scipy.stats import chi2_contingency, contingency
 
-from dashboard_app.constants.feature_type import FeatureType
-
-# TODO: need at least two types of visualisation? one for overiew and another
-# interactive one for deep dive
+from constants.feature_type import FeatureType
 
 
 class CategoricalCorrelationCard:
@@ -50,10 +47,18 @@ class CategoricalCorrelationCard:
             text="text",
             barmode="stack",
         )
+        fig.update_layout(margin=dict(t=30, b=30, l=0, r=0))
+        fig.update_traces(
+            textposition="inside",
+            textfont_size=14,
+        )
 
         st.plotly_chart(fig, use_container_width=True)
 
-    def render(self):
+    def _render_summary_description(self):
+        st.subheader("Relationship Between Categorical Variables")
 
-        st.subheader("Categorical Correlation Analysis")
-        self._plot_stacked_barchart()
+    def render(self):
+        with st.container(border=True):
+            self._render_summary_description()
+            self._plot_stacked_barchart()

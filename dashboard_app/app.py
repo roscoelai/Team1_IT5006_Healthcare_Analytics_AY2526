@@ -1,35 +1,32 @@
 """Main entry point for the streamlit interactive dashboard"""
 
 import os
+import sys
+
 import streamlit as st
 import pandas as pd
 
+sys.path.append(os.path.dirname(__file__))
+
+from utils.dataloader import DataLoader
+
+# Constants
 BASE_PAGE_DIR = "./pages"
-
-
-@st.cache_data
-def load_csv_data(path: str) -> pd.DataFrame:
-    return pd.read_csv(path)
+DATA_PATH = "./data/diabetic_data.csv"
+METADATA_PATH = "./data/diabetes_datadict.csv"
 
 
 def create_pages() -> list[st.Page]:
+    """Create the pages for the dashboard
+
+    Returns:
+        list[st.Page]: List of pages for the dashboard, in the order they should appear
+    """
     intro = st.Page(
         os.path.join(BASE_PAGE_DIR, "introduction.py"),
         title="Introduction",
         icon="🏠",
         url_path="introduction",
-    )
-    literature_review = st.Page(
-        os.path.join(BASE_PAGE_DIR, "literature_review.py"),
-        title="Literature Review",
-        icon="📚",
-        url_path="literature",
-    )
-    data_prepro = st.Page(
-        os.path.join(BASE_PAGE_DIR, "data_preprocessing.py"),
-        title="Data Preprocessing",
-        icon="🔧",
-        url_path="preprocessing",
     )
     eda = st.Page(
         os.path.join(BASE_PAGE_DIR, "exploratory_analysis.py"),
@@ -37,19 +34,22 @@ def create_pages() -> list[st.Page]:
         icon="🔍",
         url_path="eda",
     )
-    dashboard = st.Page(
-        os.path.join(BASE_PAGE_DIR, "dashboard.py"),
-        title="Dashboard",
-        icon="📊",
-        url_path="dashboard",
-    )
 
-    return [intro, literature_review, data_prepro, eda, dashboard]
+    return [intro, eda]
 
 
 def main():
+
+    # Initialize DataLoader
+    DataLoader.init(DATA_PATH, METADATA_PATH)
+
+    # Create pages
     pages = create_pages()
+
+    # Setup navigation
     pg = st.navigation(pages)
+
+    # Set page config and run
     st.set_page_config(page_title="Diabetic Data Dashboard", layout="wide")
     pg.run()
 

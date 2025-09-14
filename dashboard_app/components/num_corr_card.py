@@ -3,7 +3,8 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
-from dashboard_app.constants.feature_type import FeatureType
+from constants.feature_type import FeatureType
+from constants.color import Color
 
 
 class NumericalCorrelationCard:
@@ -70,7 +71,7 @@ class NumericalCorrelationCard:
                     {second_desc}
                 """
             )
-        jitter = st.slider("**Jitter amount**", 0.0, 1.0, 0.5)
+        jitter = st.slider("**Jitter amount**", 0.0, 0.3, 0.01)
         data_jittered = self.data[self.numerical_features].copy()
         for col in self.numerical_features:
             data_jittered[col] = add_jitter(data_jittered[col], scale=jitter)
@@ -83,6 +84,7 @@ class NumericalCorrelationCard:
             height=600,
             width=400,
         )
+        fig.update_traces(marker_color=Color.PRIMARY)
         st.plotly_chart(fig, use_container_width=True)
 
     def _plot_correlation_matrix(self):
@@ -111,6 +113,7 @@ class NumericalCorrelationCard:
 
     def _render_summary_description(self):
         # Describe the correlation analysis
+        st.subheader("Relationship Between Numerical Variables")
         st.markdown(
             f"""
             **Spearman correlation coefficient** is used to measure the correlation 
@@ -125,7 +128,6 @@ class NumericalCorrelationCard:
 
         """
         )
-        st.error("TODO!: add some insights gained")
 
     def render(self):
         with st.container(border=True):

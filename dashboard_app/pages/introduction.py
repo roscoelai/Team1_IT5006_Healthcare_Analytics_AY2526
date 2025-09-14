@@ -5,6 +5,15 @@ from functools import partial
 import pandas as pd
 import streamlit as st
 
+from components.overview_card import OverviewCard
+from components.datadict_card import DataDictCard
+from utils.dataloader import DataLoader
+
+# Load data required for the page
+df = DataLoader.get_data()
+metadata = DataLoader.get_metadata()
+
+
 st.title("Introduction")
 
 # ------------------------------------------------------------------------------
@@ -24,6 +33,13 @@ st.markdown(
 st.subheader("Dataset Overview")
 st.markdown(
     """
+    The dataset is from the UCI Machine Learning Repository which contains `101,766` 
+    hospital encounters from 130 U.S. hospitals, spanning 1999–2008, with `50` 
+    variables covering demographics, diagnoses, procedures, labs, and medications.  
+
+    The target variable is `readmitted`, which indicates whether a patient was 
+    readmitted within 30 days, after 30 days, or not readmitted.  
+
     - **Source**: [UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/296/diabetes+130-us+hospitals+for+years+1999-2008)  
     - **Domain**:  Healthcare/Hospital Management  
     - **Size**: 101,766 records of hospitalized patients diagnosed with diabetes across 130 hospitals  
@@ -39,70 +55,19 @@ st.markdown(
 
     """
 )
+OverviewCard(df, metadata).render()
 
-
-@st.cache_data
-def load_descr_df(path: str) -> pd.DataFrame:
-    with open(path) as f:
-        descriptions = json.load(f)
-    return pd.DataFrame(list(descriptions.items()), columns=["Feature", "Description"])
-
-
-def style_df(df: pd.DataFrame, target_feature: str) -> pd.DataFrame:
-
-    def highlight_target(row: pd.Series, target_feature: str) -> list[str]:
-        return [
-            "background-color: blue" if row["Feature"] == target_feature else ""
-            for _ in row
-        ]
-
-    styled_df = df.style.apply(
-        partial(highlight_target, target_feature=target_feature), axis=1
-    )
-    return styled_df
-
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-data_dir = os.path.join(current_dir, "../data")
-
-descriptions_df = load_descr_df(os.path.join(data_dir, "descriptions.json"))
-styled_df = style_df(descriptions_df, target_feature="readmitted")
-st.dataframe(styled_df, width="content")
 # ------------------------------------------------------------------------------
-# 3. Feature Categories
+# Data Dictionary
 # ------------------------------------------------------------------------------
-st.subheader("Feature Categories")
+st.subheader("Data Dictionary")
 st.markdown(
     """
-    - Identifiers
-    - IDs are usually not of interest, but the patients might not be unique in this dataset
-    - Demographics
-    - `race` and `weight` have missing values, `weight` might have to be dropped
-    - Admission Details
-    - Healthcare Provider
-    - `payer_code` and `medical_specialty` have missing values
-    - Clinical Metrics
-    - Diagnoses
-    - `diag_1`, `diag_2`, and `diag_3` have missing values
-    - Laboratory Results
-    - Medications
-    - Treatment Changes
-    - Target Variables
+    The data dictionary provides metadata about each variable in the dataset,
+    including its name, type, category, and description.
     """
 )
-
-# ------------------------------------------------------------------------------
-# 4. Data Types
-# ------------------------------------------------------------------------------
-st.subheader("Data Types")
-st.markdown(
-    """
-    - All data types are either integer or categorical
-    - `encounter_id`, `patient_nbr`, `admission_type_id`, `discharge_disposition_id`, and `admission_source_id` are integers that should not be treated as numbers.
-    - Ordinal: `age`, `max_glu_serum`, `A1Cresult`, Medications, and possibly `readmitted` (but might need to binarize, unless doing multinomial classification?)
-
-    """
-)
+DataDictCard(metadata).render()
 
 # ------------------------------------------------------------------------------
 # 5. Footer

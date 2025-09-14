@@ -50,9 +50,9 @@ MISSING_VALUES = {
     "gender": False,
     "age": False,
     "weight": True,
-    "admission_type_id": False,
-    "discharge_disposition_id": False,
-    "admission_source_id": False,
+    "admission_type_id": True,
+    "discharge_disposition_id": True,
+    "admission_source_id": True,
     "time_in_hospital": False,
     "payer_code": True,
     "medical_specialty": True,
@@ -233,9 +233,7 @@ DESCRIPTIONS: dict[str, str] = {
         "values, for example, physician referral, "
         "emergency room, and transfer from a hospital"
     ),
-    "time_in_hospital": (
-        "Integer number of days between admission and discharge"
-    ),
+    "time_in_hospital": ("Integer number of days between admission and discharge"),
     "payer_code": (
         "Integer identifier corresponding to 23 distinct values, "
         "for example, Blue Cross/Blue Shield, Medicare, and "
@@ -249,8 +247,7 @@ DESCRIPTIONS: dict[str, str] = {
     ),
     "num_lab_procedures": "Number of lab tests performed during the encounter",
     "num_procedures": (
-        "Number of procedures (other than lab tests) performed "
-        "during the encounter"
+        "Number of procedures (other than lab tests) performed " "during the encounter"
     ),
     "num_medications": (
         "Number of distinct generic names administered during the encounter"
@@ -348,8 +345,7 @@ IDS_MAPPINGS: dict[str, dict[str, str]] = {
         "3": "Discharged/transferred to SNF",
         "4": "Discharged/transferred to ICF",
         "5": (
-            "Discharged/transferred to another type of inpatient care "
-            "institution"
+            "Discharged/transferred to another type of inpatient care " "institution"
         ),
         "6": "Discharged/transferred to home with home health service",
         "7": "Left AMA",
@@ -622,10 +618,11 @@ def replace_icd9s(df: pl.DataFrame) -> pl.DataFrame:
     # TODO: `diag_1`, `diag_2`, and `diag_3`. Create new or replace?
     # NOTE: This is _NOT_ a one-to-one mapping, so we will lose information.
     df = df.with_columns(
-        pl.col("diag_1", "diag_2", "diag_3")
-        .map_elements(icd9_lookup, return_dtype=str)
+        pl.col("diag_1", "diag_2", "diag_3").map_elements(icd9_lookup, return_dtype=str)
     )
     return df
+
+
 # -----------------------------------------------------------------------------
 
 
@@ -657,6 +654,37 @@ def make_datadict(df: pl.DataFrame | None = None) -> pl.DataFrame:
         missing_count = s.is_null().sum()
         if s.dtype in [pl.String, pl.Enum]:
             missing_count += (s == "?").sum()
+
+        # Missing values for `admission_type_id`
+        if s.name == "admission_type_id":
+            missing_var = ["Not Available", "NULL", "Not Mapped"]
+            for mv in missing_var:
+                if mv in vc[s.name]:
+                    missing_count += vc.filter(pl.col(s.name) == mv)["count"][0]
+
+        # Missing values for `discharge_disposition_id`
+        if s.name == "discharge_disposition_id":
+            missing_var = [
+                "NULL",
+                "Not Mapped",
+                "Unknown/Invalid",
+            ]
+            for mv in missing_var:
+                if mv in vc[s.name]:
+                    missing_count += vc.filter(pl.col(s.name) == mv)["count"][0]
+
+        # Missing values for `admission_source_id`
+        if s.name == "admission_source_id":
+            missing_var = [
+                "Not Available",
+                "NULL",
+                "Not Mapped",
+                "Unknown/Invalid",
+            ]
+            for mv in missing_var:
+                if mv in vc[s.name]:
+                    missing_count += vc.filter(pl.col(s.name) == mv)["count"][0]
+
         missing_values.append(missing_count)
         if vc.height <= 118:
             vcd = dict(zip(vc[s.name], vc["count"]))
@@ -672,8 +700,9 @@ def make_datadict(df: pl.DataFrame | None = None) -> pl.DataFrame:
             "value_counts": vcds,
             "n_unique": n_uniques,
             "missing_values": missing_values,
-            "mode_pct": [s.value_counts(normalize=True)["proportion"].max()
-                         for s in df],
+            "mode_pct": [
+                s.value_counts(normalize=True)["proportion"].max() for s in df
+            ],
             "gini_impurity": [calc_gini_impurity(s) for s in df],
             "shannon_entropy": [calc_entropy(s) for s in df],
         }
@@ -685,10 +714,12 @@ def make_datadict(df: pl.DataFrame | None = None) -> pl.DataFrame:
 def make_and_write_datadict(
     source: str = SOURCE, dest: str = DEST, readonly: bool = True, verbose: bool = False
 ) -> None:
-    df = (pl.read_csv(SOURCE, infer_schema=False)
-          .pipe(replace_ids)
-          .pipe(replace_icd9s)
-          .pipe(set_schema))
+    df = (
+        pl.read_csv(SOURCE, infer_schema=False)
+        .pipe(replace_ids)
+        .pipe(replace_icd9s)
+        .pipe(set_schema)
+    )
     dd = make_datadict(df)
     if os.path.isfile(dest):
         os.chmod(dest, stat.S_IWRITE)
