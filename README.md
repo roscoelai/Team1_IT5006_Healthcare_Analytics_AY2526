@@ -1,5 +1,7 @@
 # Team1\_IT5006\_Healthcare\_Analytics\_AY2526
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://team1-it5006-healthcare-analytics-ay2526.streamlit.app/)
+
 ---
 
 ## Objective
