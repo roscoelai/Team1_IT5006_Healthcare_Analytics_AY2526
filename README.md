@@ -2,7 +2,6 @@
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://team1-it5006-healthcare-analytics-ay2526.streamlit.app/)
 
----
 
 ## Objective
 
@@ -16,27 +15,16 @@ The [Diabetes 130-US Hospitals (1999-2008)](https://archive.ics.uci.edu/dataset/
 
 [^2]: Beata Strack, Jonathan P. DeShazo, Chris Gennings, Juan L. Olmo, Sebastian Ventura, Krzysztof J. Cios, and John N. Clore, "Impact of HbA1c Measurement on Hospital Readmission Rates: Analysis of 70,000 Clinical Database Patient Records", BioMed Research International, vol. 2014, Article ID 781670, 11 pages, 2014.
 
----
 
 ## Milestones
 
-### Phase/Milestone 1: Foundation - Literature Review & Exploratory Data Analysis
-
-- Deliverables:
-  - Literature Review Report (2 pages)
-  - Exploratory Data Analysis Report (2-3 pages)
-  - Interactive Dashboard
-    - Built using Streamlit, Tableau Public, or Power BI
-    - Submit as live link (include link in submitted report)
-- Submission Format:
-  - Combined PDF report (Literature Review + EDA) with dashboard link included
-    - File name: `Team1_Milestone1_IT5006_AY2526.pdf`
-  - GitHub repository with all raw code/notebooks
+- [x] Phase/Milestone 1: Foundation - Literature Review & Exploratory Data Analysis
+- [ ] Phase/Milestone 2: Analytics Implementation - Model Building & Evaluation
+- [ ] Phase/Milestone 3: Integration & Communication - Final Report & Presentation
 
 ---
 
-## Future
-
+## Now
 
 ### Phase/Milestone 2: Analytics Implementation - Model Building & Evaluation
 
@@ -51,6 +39,9 @@ The [Diabetes 130-US Hospitals (1999-2008)](https://archive.ics.uci.edu/dataset/
   - GitHub repository with Jupyter notebooks and Python scripts
   - Model performance summary tables
 
+---
+
+## Future
 
 ### Phase/Milestone 3: Integration & Communication - Final Report & Presentation
 
