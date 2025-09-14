@@ -1,21 +1,52 @@
 #!/usr/bin/env python
 # datadict.py
-# 2025-09-06
+# 2025-09-14
 # Roscoe
 
 """
 Create a data dictionary for the dataset.
+
+Variable categories from the project brief. Descriptions from UCI ML
+Repository, used to be hard-coded here, but moved out to `descriptions.json`
+for simpler maintenance. It adds a dependency, so be careful. We will decide
+the schema.
+
+This doesn't really flow nicely because the data dictionary will involve
+some summaries of the data, and that has to happen after preprocessing.
+
+The data dictionary should minimally provide the descriptions for each
+variable. Additionally, it could also specify data types and variable
+categories. Summaries can include counting unique values per variable,
+counting number of missing values per variable, even perhaps a breakdown of
+counts of each unique value if space permits.
+
+Extra bells and whistles could include calculating the proportion of mode
+values per variable, entropy, or Gini impurity index, though they might
+encroach on the domain of EDA, so the inclusion of these are up for debate.
 """
 
+import json
 import os
 import stat
+import sys
 from enum import Enum
+from inspect import currentframe, getframeinfo
 
 import polars as pl
 
-# NOTE: do we really have to construct this metadata? is this not avail somewhere
+# This will be necessary to import modules from a different folder.
+_ = os.path.dirname(getframeinfo(currentframe()).filename)
+if _ not in sys.path:
+    sys.path.append(_)
+_ = os.path.dirname(_)
+if _ not in sys.path:
+    sys.path.append(_)
 
-SOURCE: str = "data/diabetic_data.csv"
+from eda.metrics import calc_entropy, calc_gini_impurity
+from etl import preprocess_raw
+
+
+DESCRIPTIONS_JSON: str = "data/descriptions.json"
 DEST: str = "data/diabetes_datadict.csv"
 
 
@@ -94,9 +125,12 @@ MISSING_VALUES = {
     "change": False,
     "diabetesMed": False,
     "readmitted": False,
+    "diag_1b": True,
+    "diag_2b": True,
+    "diag_3b": True,
 }
 
-# ---
+
 FEATURE_TYPES = {
     "encounter_id": FeatureType.IDENTIFIER,
     "patient_nbr": FeatureType.IDENTIFIER,
@@ -120,8 +154,8 @@ FEATURE_TYPES = {
     "diag_2": FeatureType.NOMINAL,
     "diag_3": FeatureType.NOMINAL,
     "number_diagnoses": FeatureType.DISCRETE,
-    "max_glu_serum": FeatureType.NOMINAL,  # Ordinal, if not for "None"
-    "A1Cresult": FeatureType.NOMINAL,  # Ordinal, if not for "None"
+    "max_glu_serum": FeatureType.NOMINAL,  # Ordinal if not for "None"
+    "A1Cresult": FeatureType.NOMINAL,  # Ordinal if not for "None"
     "metformin": FeatureType.ORDINAL,
     "repaglinide": FeatureType.ORDINAL,
     "nateglinide": FeatureType.ORDINAL,
@@ -148,6 +182,9 @@ FEATURE_TYPES = {
     "change": FeatureType.BOOLEAN,
     "diabetesMed": FeatureType.BOOLEAN,
     "readmitted": FeatureType.ORDINAL,
+    "diag_1b": FeatureType.NOMINAL,
+    "diag_2b": FeatureType.NOMINAL,
+    "diag_3b": FeatureType.NOMINAL,
 }
 
 VARIABLE_CATEGORIES: dict[str, str] = {
@@ -201,496 +238,55 @@ VARIABLE_CATEGORIES: dict[str, str] = {
     "change": Categories.TREATMENT_CHANGES,
     "diabetesMed": Categories.TREATMENT_CHANGES,
     "readmitted": Categories.TARGET_VARIABLES,
-}
-
-_RX_DESC: str = (
-    "The feature indicates whether the drug was prescribed or "
-    "there was a change in the dosage. Values: up if the dosage "
-    "was increased during the encounter, down if the dosage was "
-    "decreased, steady if the dosage did not change, and no if "
-    "the drug was not prescribed"
-)
-
-DESCRIPTIONS: dict[str, str] = {
-    "encounter_id": "Unique identifier of an encounter",
-    "patient_nbr": "Unique identifier of a patient",
-    "race": "Values: Caucasian, Asian, African American, Hispanic, and other",
-    "gender": "Values: male, female, and unknown/invalid",
-    "age": "Grouped in 10-year intervals: [0, 10), [10, 20),..., [90, 100)",
-    "weight": "Weight in pounds.",
-    "admission_type_id": (
-        "Integer identifier corresponding to 9 distinct "
-        "values, for example, emergency, urgent, elective, "
-        "newborn, and not available"
-    ),
-    "discharge_disposition_id": (
-        "Integer identifier corresponding to 29 "
-        "distinct values, for example, discharged "
-        "to home, expired, and not available"
-    ),
-    "admission_source_id": (
-        "Integer identifier corresponding to 21 distinct "
-        "values, for example, physician referral, "
-        "emergency room, and transfer from a hospital"
-    ),
-    "time_in_hospital": ("Integer number of days between admission and discharge"),
-    "payer_code": (
-        "Integer identifier corresponding to 23 distinct values, "
-        "for example, Blue Cross/Blue Shield, Medicare, and "
-        "self-pay"
-    ),
-    "medical_specialty": (
-        "Integer identifier of a specialty of the admitting "
-        "physician, corresponding to 84 distinct values, "
-        "for example, cardiology, internal medicine, "
-        "family/general practice, and surgeon"
-    ),
-    "num_lab_procedures": "Number of lab tests performed during the encounter",
-    "num_procedures": (
-        "Number of procedures (other than lab tests) performed " "during the encounter"
-    ),
-    "num_medications": (
-        "Number of distinct generic names administered during the encounter"
-    ),
-    "number_outpatient": (
-        "Number of outpatient visits of the patient in the "
-        "year preceding the encounter"
-    ),
-    "number_emergency": (
-        "Number of emergency visits of the patient in the "
-        "year preceding the encounter"
-    ),
-    "number_inpatient": (
-        "Number of inpatient visits of the patient in the "
-        "year preceding the encounter"
-    ),
-    "diag_1": (
-        "The primary diagnosis (coded as first three digits of ICD9); "
-        "848 distinct values"
-    ),
-    "diag_2": (
-        "Secondary diagnosis (coded as first three digits of ICD9); "
-        "923 distinct values"
-    ),
-    "diag_3": (
-        "Additional secondary diagnosis (coded as first three digits "
-        "of ICD9); 954 distinct values"
-    ),
-    "number_diagnoses": "Number of diagnoses entered to the system",
-    "max_glu_serum": (
-        "Indicates the range of the result or if the test was "
-        "not taken. Values: >200, >300, normal, and none if not "
-        "measured"
-    ),
-    "A1Cresult": (
-        "Indicates the range of the result or if the test was not "
-        "taken. Values: >8 if the result was greater than 8%, >7 if "
-        "the result was greater than 7% but less than 8%, normal if "
-        "the result was less than 7%, and none if not measured."
-    ),
-    "metformin": _RX_DESC,
-    "repaglinide": _RX_DESC,
-    "nateglinide": _RX_DESC,
-    "chlorpropamide": _RX_DESC,
-    "glimepiride": _RX_DESC,
-    "acetohexamide": _RX_DESC,
-    "glipizide": _RX_DESC,
-    "glyburide": _RX_DESC,
-    "tolbutamide": _RX_DESC,
-    "pioglitazone": _RX_DESC,
-    "rosiglitazone": _RX_DESC,
-    "acarbose": _RX_DESC,
-    "miglitol": _RX_DESC,
-    "troglitazone": _RX_DESC,
-    "tolazamide": _RX_DESC,
-    "examide": _RX_DESC,
-    "citoglipton": _RX_DESC,
-    "insulin": _RX_DESC,
-    "glyburide-metformin": _RX_DESC,
-    "glipizide-metformin": _RX_DESC,
-    "glimepiride-pioglitazone": _RX_DESC,
-    "metformin-rosiglitazone": _RX_DESC,
-    "metformin-pioglitazone": _RX_DESC,
-    "change": (
-        "Indicates if there was a change in diabetic medications "
-        "(either dosage or generic name). Values: change and no "
-        "change"
-    ),
-    "diabetesMed": (
-        "Indicates if there was any diabetic medication "
-        "prescribed. Values: yes and no"
-    ),
-    "readmitted": (
-        "Days to inpatient readmission. Values: <30 if the patient "
-        "was readmitted in less than 30 days, >30 if the patient "
-        "was readmitted in more than 30 days, and No for no record "
-        "of readmission."
-    ),
-}
-
-IDS_MAPPINGS: dict[str, dict[str, str]] = {
-    "admission_type_id": {
-        "1": "Emergency",
-        "2": "Urgent",
-        "3": "Elective",
-        "4": "Newborn",
-        "5": "Not Available",
-        "6": "NULL",
-        "7": "Trauma Center",
-        "8": "Not Mapped",
-    },
-    "discharge_disposition_id": {
-        "1": "Discharged to home",
-        "2": "Discharged/transferred to another short term hospital",
-        "3": "Discharged/transferred to SNF",
-        "4": "Discharged/transferred to ICF",
-        "5": (
-            "Discharged/transferred to another type of inpatient care " "institution"
-        ),
-        "6": "Discharged/transferred to home with home health service",
-        "7": "Left AMA",
-        "8": "Discharged/transferred to home under care of Home IV provider",
-        "9": "Admitted as an inpatient to this hospital",
-        "10": "Neonate discharged to another hospital for neonatal aftercare",
-        "11": "Expired",
-        "12": "Still patient or expected to return for outpatient services",
-        "13": "Hospice / home",
-        "14": "Hospice / medical facility",
-        "15": (
-            "Discharged/transferred within this institution to Medicare "
-            "approved swing bed"
-        ),
-        "16": (
-            "Discharged/transferred/referred another institution for "
-            "outpatient services"
-        ),
-        "17": (
-            "Discharged/transferred/referred to this institution for "
-            "outpatient services"
-        ),
-        "18": "NULL",
-        "19": "Expired at home. Medicaid only, hospice.",
-        "20": "Expired in a medical facility. Medicaid only, hospice.",
-        "21": "Expired, place unknown. Medicaid only, hospice.",
-        "22": (
-            "Discharged/transferred to another rehab fac including rehab "
-            "units of a hospital."
-        ),
-        "23": "Discharged/transferred to a long term care hospital.",
-        "24": (
-            "Discharged/transferred to a nursing facility certified under "
-            "Medicaid but not certified under Medicare."
-        ),
-        "25": "Not Mapped",
-        "26": "Unknown/Invalid",
-        "30": (
-            "Discharged/transferred to another Type of Health Care "
-            "Institution not Defined Elsewhere"
-        ),
-        "27": "Discharged/transferred to a federal health care facility.",
-        "28": (
-            "Discharged/transferred/referred to a psychiatric hospital of "
-            "psychiatric distinct part unit of a hospital"
-        ),
-        "29": "Discharged/transferred to a Critical Access Hospital (CAH).",
-    },
-    "admission_source_id": {
-        "1": "Physician Referral",
-        "2": "Clinic Referral",
-        "3": "HMO Referral",
-        "4": "Transfer from a hospital",
-        "5": "Transfer from a Skilled Nursing Facility (SNF)",
-        "6": "Transfer from another health care facility",
-        "7": "Emergency Room",
-        "8": "Court/Law Enforcement",
-        "9": "Not Available",
-        "10": "Transfer from critial access hospital",
-        "11": "Normal Delivery",
-        "12": "Premature Delivery",
-        "13": "Sick Baby",
-        "14": "Extramural Birth",
-        "15": "Not Available",
-        "17": "NULL",
-        "18": "Transfer From Another Home Health Agency",
-        "19": "Readmission to Same Home Health Agency",
-        "20": "Not Mapped",
-        "21": "Unknown/Invalid",
-        "22": "Transfer from hospital inpt/same fac reslt in a sep claim",
-        "23": "Born inside this hospital",
-        "24": "Born outside this hospital",
-        "25": "Transfer from Ambulatory Surgery Center",
-        "26": "Transfer from Hospice",
-    },
+    "diag_1b": Categories.DIAGNOSES,
+    "diag_2b": Categories.DIAGNOSES,
+    "diag_3b": Categories.DIAGNOSES,
 }
 
 
-def icd9_lookup(x: str) -> str:
-    """
-    https://en.wikipedia.org/wiki/List_of_ICD-9_codes
-
-    Will need to look more carefully at this one.
-    """
-    # These may not be interesting.
-    if x == "?":
-        return x
-    # elif x.startswith("E"):
-    #     return "External causes of injury"
-    # elif x.startswith("V"):
-    #     return "Supplemental classification"
-    elif x.startswith("E") or x.startswith("V"):
-        return "Injury/Supplemental classification"
-
-    x_num = float(x)
-    if 1 <= x_num <= 139:
-        # return "infectious and parasitic diseases"
-        return "Infections"
-    elif 140 <= x_num <= 239:
-        return "Neoplasms"
-
-    # -------------------------------------------------------------------------
-    # Drill down into this category because diabetes is the focus.
-    # elif 240 <= x_num <= 279:
-    #     return ("endocrine, nutritional and metabolic diseases, and immunity "
-    #             "disorders")
-    elif 249 <= x_num < 251:
-        return "Diabetes mellitus"
-    # elif 249 <= x_num < 250:
-    #     return "Secondary diabetes mellitus"
-    elif 240 <= x_num < 280:
-        return "Other metabolic and immunity"
-
-    # elif 249 <= x_num < 260:
-    #     return "Diseases of other endocrine glands"
-
-    # elif 240 <= x_num < 247:
-    #     return "Disorders of thyroid gland"
-    # elif 251 <= x_num < 260:
-    #     return "Diseases of other endocrine glands"
-
-    # elif 260 <= x_num < 270:
-    #     return "Nutritional deficiencies"
-    # elif 270 <= x_num < 280:
-    #     return "Other metabolic and immunity disorders"
-    # -------------------------------------------------------------------------
-
-    elif 280 <= x_num <= 289:
-        # return "diseases of the blood and blood-forming organs"
-        return "Blood"
-    elif 290 <= x_num <= 319:
-        # return "mental disorders"
-        return "Mental"
-    elif 320 <= x_num <= 389:
-        # return "diseases of the nervous system and sense organs"
-        return "Nervous"
-    elif 390 <= x_num <= 459:
-        # return "diseases of the circulatory system"
-        return "Circulatory"
-    elif 460 <= x_num <= 519:
-        # return "diseases of the respiratory system"
-        return "Respiratory"
-    elif 520 <= x_num <= 579:
-        # return "diseases of the digestive system"
-        return "Digestive"
-    elif 580 <= x_num <= 629:
-        # return "diseases of the genitourinary system"
-        return "Genitourinary"
-    elif 630 <= x_num <= 679:
-        # return "complications of pregnancy, childbirth, and the puerperium"
-        return "OBGYN"
-    elif 680 <= x_num <= 709:
-        # return "diseases of the skin and subcutaneous tissue"
-        return "Dermatology"
-    elif 710 <= x_num <= 739:
-        # return "diseases of the musculoskeletal system and connective tissue"
-        return "Musculoskeletal"
-    elif 740 <= x_num <= 759:
-        # return "congenital anomalies"
-        return "Congenital"
-    elif 760 <= x_num <= 779:
-        # return "certain conditions originating in the perinatal period"
-        return "Perinatal"
-    elif 780 <= x_num <= 799:
-        # return "symptoms, signs, and ill-defined conditions"
-        return "Ill-defined"
-    elif 800 <= x_num <= 999:
-        # return "injury and poisoning"
-        return "Injury/Poisoning"
-    return x
+def get_descs(source: str=DESCRIPTIONS_JSON) -> dict[str, str]:
+    with open(source) as f:
+        return json.load(f)
 
 
-def make_skeleton() -> pl.DataFrame:
+def make_skeleton(descriptions: dict[str, str]=get_descs()) -> pl.DataFrame:
     dd = pl.DataFrame(
         {
-            "variable": DESCRIPTIONS.keys(),
-            "category": [VARIABLE_CATEGORIES[k] for k in DESCRIPTIONS],
-            "description": DESCRIPTIONS.values(),
-            "feature_type": [FEATURE_TYPES[k] for k in DESCRIPTIONS],
+            "variable": descriptions.keys(),
+            "category": [VARIABLE_CATEGORIES[k] for k in descriptions],
+            "description": descriptions.values(),
+            "feature_type": [FEATURE_TYPES[k] for k in descriptions],
         }
     )
     return dd
-
-
-def set_schema(df: pl.DataFrame) -> pl.DataFrame:
-    """
-    Define and set data types for variables.
-
-    Questionable to treat "?" or "None" as first ordinals, but will mainly be
-    for visualization. Unlikely these variables will be used as-is.
-    """
-    numerics = [
-        "time_in_hospital",
-        "num_lab_procedures",
-        "num_procedures",
-        "num_medications",
-        "number_outpatient",
-        "number_emergency",
-        "number_inpatient",
-        "number_diagnoses",
-    ]
-
-    medications_ord = ["No", "Down", "Steady", "Up"]
-    enums = {
-        "age": [
-            "[0-10)",
-            "[10-20)",
-            "[20-30)",
-            "[30-40)",
-            "[40-50)",
-            "[50-60)",
-            "[60-70)",
-            "[70-80)",
-            "[80-90)",
-            "[90-100)",
-        ],
-        "weight": [
-            "?",
-            "[0-25)",
-            "[25-50)",
-            "[50-75)",
-            "[75-100)",
-            "[100-125)",
-            "[125-150)",
-            "[150-175)",
-            "[175-200)",
-            ">200",
-        ],
-        "max_glu_serum": ["None", "Norm", ">200", ">300"],
-        "A1Cresult": ["None", "Norm", ">7", ">8"],
-        "metformin": medications_ord,
-        "repaglinide": medications_ord,
-        "nateglinide": medications_ord,
-        "chlorpropamide": medications_ord,
-        "glimepiride": medications_ord,
-        "acetohexamide": medications_ord,
-        "glipizide": medications_ord,
-        "glyburide": medications_ord,
-        "tolbutamide": medications_ord,
-        "pioglitazone": medications_ord,
-        "rosiglitazone": medications_ord,
-        "acarbose": medications_ord,
-        "miglitol": medications_ord,
-        "troglitazone": medications_ord,
-        "tolazamide": medications_ord,
-        "examide": medications_ord,
-        "citoglipton": medications_ord,
-        "insulin": medications_ord,
-        "glyburide-metformin": medications_ord,
-        "glipizide-metformin": medications_ord,
-        "glimepiride-pioglitazone": medications_ord,
-        "metformin-rosiglitazone": medications_ord,
-        "metformin-pioglitazone": medications_ord,
-        "readmitted": ["NO", ">30", "<30"],
-    }
-
-    df = df.with_columns(pl.col(numerics).cast(int))
-    df = df.with_columns(pl.col(k).cast(pl.Enum(v)) for k, v in enums.items())
-    return df
-
-
-# Column modifying functions --------------------------------------------------
-def replace_ids(df: pl.DataFrame) -> pl.DataFrame:
-    for name, mapping in IDS_MAPPINGS.items():
-        df = df.with_columns(pl.col(name).replace(mapping))
-    return df
-
-
-def replace_icd9s(df: pl.DataFrame) -> pl.DataFrame:
-    # TODO: `diag_1`, `diag_2`, and `diag_3`. Create new or replace?
-    # NOTE: This is _NOT_ a one-to-one mapping, so we will lose information.
-    df = df.with_columns(
-        pl.col("diag_1", "diag_2", "diag_3").map_elements(icd9_lookup, return_dtype=str)
-    )
-    return df
-
-
-# -----------------------------------------------------------------------------
-
-
-def calc_gini_impurity(s: pl.Series) -> float:
-    vc = s.value_counts(normalize=True)
-    vc = vc.with_columns(pl.col("proportion").pow(2).alias("prop2"))
-    return 1 - vc["prop2"].sum()
-
-
-def calc_entropy(s: pl.Series) -> float:
-    p = pl.col("proportion")
-    vc = s.value_counts(normalize=True)
-    vc = vc.with_columns(-p.log(base=2).mul(p).alias("shannon"))
-    return vc["shannon"].sum()
 
 
 def make_datadict(df: pl.DataFrame | None = None) -> pl.DataFrame:
     dd = make_skeleton()
     if df is None:
         return dd
+    missing_set = {"?", "Not Available", "Not Mapped", "NULL"}
     dtypes = []
     n_uniques = []
     vcds = []
-    missing_values = []
+    n_missings = []
     for s in df:
         dtypes.append(str(type(s.dtype)))
         n_uniques.append(s.n_unique())
         vc = s.value_counts().sort(s.name)
-        missing_count = s.is_null().sum()
+        n_missing = s.is_null().sum()
         if s.dtype in [pl.String, pl.Enum]:
-            missing_count += (s == "?").sum()
+            ms = missing_set
+            if s.name in {"discharge_disposition_id", "admission_type_id"}:
+                ms = missing_set | {"Unknown/Invalid"}
+            n_missing += s.cast(str).is_in(ms).sum()
 
-        # Missing values for `admission_type_id`
-        if s.name == "admission_type_id":
-            missing_var = ["Not Available", "NULL", "Not Mapped"]
-            for mv in missing_var:
-                if mv in vc[s.name]:
-                    missing_count += vc.filter(pl.col(s.name) == mv)["count"][0]
-
-        # Missing values for `discharge_disposition_id`
-        if s.name == "discharge_disposition_id":
-            missing_var = [
-                "NULL",
-                "Not Mapped",
-                "Unknown/Invalid",
-            ]
-            for mv in missing_var:
-                if mv in vc[s.name]:
-                    missing_count += vc.filter(pl.col(s.name) == mv)["count"][0]
-
-        # Missing values for `admission_source_id`
-        if s.name == "admission_source_id":
-            missing_var = [
-                "Not Available",
-                "NULL",
-                "Not Mapped",
-                "Unknown/Invalid",
-            ]
-            for mv in missing_var:
-                if mv in vc[s.name]:
-                    missing_count += vc.filter(pl.col(s.name) == mv)["count"][0]
-
-        missing_values.append(missing_count)
+        n_missings.append(n_missing)
         if vc.height <= 118:
             vcd = dict(zip(vc[s.name], vc["count"]))
             if s.dtype == pl.Enum:
                 vcd = {k: vcd.get(k, 0) for k in s.dtype.categories}
-            vcds.append(str(vcd).replace("'", '"'))
+            vcds.append(str(vcd).replace("'", '"'))  # For valid JSON format.
         else:
             vcds.append(None)
     dd2 = pl.DataFrame(
@@ -699,42 +295,30 @@ def make_datadict(df: pl.DataFrame | None = None) -> pl.DataFrame:
             "data_type": dtypes,
             "value_counts": vcds,
             "n_unique": n_uniques,
-            "missing_values": missing_values,
+            "missing_values": n_missings,
             "mode_pct": [
                 s.value_counts(normalize=True)["proportion"].max() for s in df
             ],
-            "gini_impurity": [calc_gini_impurity(s) for s in df],
-            "shannon_entropy": [calc_entropy(s) for s in df],
+            "gini_impurity": [round(calc_gini_impurity(s), 12) for s in df],
+            "shannon_entropy": [round(calc_entropy(s), 12) for s in df],
         }
     )
     dd = dd.join(dd2, on="variable", how="left")
     return dd
 
 
-def make_and_write_datadict(
-    source: str = SOURCE, dest: str = DEST, readonly: bool = True, verbose: bool = False
-) -> None:
-    df = (
-        pl.read_csv(SOURCE, infer_schema=False)
-        .pipe(replace_ids)
-        .pipe(replace_icd9s)
-        .pipe(set_schema)
-    )
+def make_and_write_datadict(dest: str = DEST) -> None:
+    df = preprocess_raw()
     dd = make_datadict(df)
     if os.path.isfile(dest):
         os.chmod(dest, stat.S_IWRITE)
     dd.write_csv(dest)
-    if readonly:
-        os.chmod(dest, stat.S_IREAD)
-    if verbose:
-        msg = f"File written: '{dest}'"
-        if readonly:
-            msg += ", read-only"
-        print(msg)
+    os.chmod(dest, stat.S_IREAD)
+    print(f"File written: '{dest}'")
 
 
 def main() -> None:
-    make_and_write_datadict(verbose=True)
+    make_and_write_datadict()
 
 
 if __name__ == "__main__":

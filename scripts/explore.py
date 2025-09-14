@@ -7,9 +7,9 @@
 Have at it.
 """
 
-import inspect
 import os
 import sys
+from inspect import currentframe, getframeinfo
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,25 +19,20 @@ import polars.selectors as cs
 import seaborn as sns
 from scipy.stats import chi2_contingency, spearmanr
 
-sys.path.append(
-    os.path.dirname(inspect.getframeinfo(inspect.currentframe()).filename)
-)
-
-from etl import datadict
+_ = os.path.dirname(getframeinfo(currentframe()).filename)
+if _ not in sys.path:
+    sys.path.append(_)
 
 
-SOURCE: str = "data/diabetic_data.parquet"
+SOURCE: str = f"{os.path.dirname(_)}/data/diabetic_data.parquet"
 
 
-def read_data(source: str=SOURCE) -> pl.DataFrame:
-    if os.path.isfile(source):
-        df = pl.read_parquet(source)
-    else:
+def get_data(source: str=SOURCE) -> pl.DataFrame:
+    if not os.path.isfile(source):
         from etl import etl
-        df = (etl.read_raw()
-              .pipe(etl.replace_ids)
-              .pipe(etl.drop_constant_columns))
-        etl.make_parquet(df, verbose=True)
+        df = etl.process_raw()
+        etl.make_parquet(df, dest=source)
+    df = pl.read_parquet(source)
     return df
 
 
@@ -179,13 +174,8 @@ def cramers_v_pairwise(df: pl.DataFrame, threshold: float=0.2) -> None:
 
 
 def main() -> None:
-    df = read_data()
-    df = calc_n_admissions(df)
-    # print(df)
-    with pl.Config(tbl_width_chars=300, fmt_str_lengths=200, tbl_rows=19) as cfg:
-        for k in [f"diag_{i}" for i in [1, 2, 3]]:
-            print(k)
-            print(df[k].map_elements(datadict.icd9_lookup, return_dtype=str).value_counts(sort=True))
+    df = get_data()
+    df = df.pipe(calc_n_admissions)
     return
     corr_numerics(df)
     corr_enums(df)

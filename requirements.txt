@@ -1,9 +1,12 @@
 altair
+jupyterlab
 matplotlib
 numpy
 pandas
+plotly
 polars
-pyplot
 scikit-learn
+scipy
 seaborn
+statsmodels
 streamlit
