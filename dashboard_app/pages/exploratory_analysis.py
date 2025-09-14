@@ -156,6 +156,9 @@ with st.container(border=True):
             )
         ).T.reset_index()
         mode_info.columns = ["variable", "mode", "% mode"]
+        mode_info["mode"] = mode_info["mode"].apply(
+            lambda v: int(v) if isinstance(v, float) and v.is_integer() else v
+        )
 
         threshold = 0.80  # filter out those with mode perc > threshold
         low_variance_df = (
