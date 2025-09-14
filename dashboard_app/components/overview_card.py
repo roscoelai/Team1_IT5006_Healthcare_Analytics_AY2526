@@ -32,7 +32,7 @@ class OverviewCard:
             option = st.selectbox(
                 "Select subset of raw data to view:",
                 options=[member.value for member in DataSubset],
-                index=0,
+                index=1,
             )
             col1, col2 = st.columns([1, 5])
             with col2:
