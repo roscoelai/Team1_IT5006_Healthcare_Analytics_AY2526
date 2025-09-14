@@ -25,6 +25,7 @@ metadata = DataLoader.get_metadata()
 
 # ---
 # TODO: check if all the .copy() are necessary - not needed if not modifying the df
+# TODO: break down into card components
 
 st.title("Exploratory Data Analysis")
 
@@ -49,7 +50,7 @@ with st.container(border=True):
         st.subheader("Missing Values in Features")
         st.markdown(
             """
-                - There are **seven** features with missing values.  
+                - There are **ten** features with missing values.  
                 - `weight` has too many missing values to be useful and will 
                 be dropped from further analysis.  
                 - The other features with missing values will need to be handled
@@ -137,7 +138,7 @@ with st.container(border=True):
         st.subheader("Features with Low Variance")
         st.markdown(
             """
-            - There are seven features with no variance *(i.e., the same value for all records)* 
+            - There are two features with no variance *(i.e., the same value for all records)* 
             and a total of 25 features with >80% uniformity.  
             - These need to be assessed futher to determine if they are informative or
             should be removed from further analysis.  
@@ -175,7 +176,7 @@ with st.container(border=True):
             f"*{low_variance_df.shape[0]:,} features with > {threshold:.0%} uniformity*"
         )
         low_variance_df["% mode"] = low_variance_df["% mode"].apply(
-            lambda x: f"{x:.2%}"
+            lambda x: f"{x:.3%}"
         )
 
         # gradient highlight % mode column from 80% (light yellow) to 100% (dark orange)
