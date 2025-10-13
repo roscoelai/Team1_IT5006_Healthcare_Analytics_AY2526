@@ -184,7 +184,7 @@ def train_gaussian_nb(
     target: str,
     test_size: float = 0.3,
     random_state: int = 42,
-) -> tuple[GaussianNB, pd.Series, np.ndarray]:
+) -> tuple[GaussianNB, pd.Series, np.ndarray, np.ndarray]:
     """Train a Gaussian Naive Bayes model with preprocessing pipeline.
 
     Args:
@@ -194,8 +194,8 @@ def train_gaussian_nb(
         test_size (float, optional): Proportion of the dataset to include in the test split. Defaults to 0.3.
         random_state (int, optional): Random seed for reproducibility. Defaults to 42.
     Returns:
-        tuple[GaussianNB, pd.Series, np.ndarray]: Trained GaussianNB model,
-            predicted labels, and true labels for the test set.
+        tuple[GaussianNB, pd.Series, np.ndarray, np.ndarray]: Trained GaussianNB model,
+            true labels, predicted labels, and predicted probabilities for the test set.
 
     """
 
@@ -211,23 +211,20 @@ def train_gaussian_nb(
 
     pipe.fit(X_train, y_train)
     y_pred = pipe.predict(X_test)
+    y_proba = pipe.predict_proba(X_test)
     model = pipe.named_steps["classifier"]
 
-    return model, y_test, y_pred
+    return model, y_test, y_pred, y_proba
 
 
-def evaluate_model(y_test: pd.Series, y_pred: np.ndarray):
+def evaluate_model(y_test: pd.Series, y_pred: np.ndarray, y_proba: np.ndarray):
     """Evaluate the model performance with plots and summary table."""
 
     accuracy = accuracy_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred, average="weighted", zero_division=0)
     recall = recall_score(y_test, y_pred, average="weighted", zero_division=0)
     f1 = f1_score(y_test, y_pred, average="weighted", zero_division=0)
-    roc_auc = (
-        roc_auc_score(y_test, y_pred, multi_class="ovo")
-        if len(np.unique(y_test)) > 2
-        else roc_auc_score(y_test, y_pred)
-    )
+    roc_auc = roc_auc_score(y_test, y_proba[:, 1])
 
     print("Classification Report:")
     print(classification_report(y_test, y_pred, zero_division=0))
@@ -244,7 +241,7 @@ def evaluate_model(y_test: pd.Series, y_pred: np.ndarray):
     ax[0].set_title("Confusion Matrix (%)")
 
     if len(np.unique(y_test)) == 2:
-        fpr, tpr, _ = roc_curve(y_test, y_pred)
+        fpr, tpr, _ = roc_curve(y_test, y_proba[:, 1])
         ax[1].plot(fpr, tpr, label=f"AUC = {roc_auc:.2f}")
         ax[1].plot([0, 1], [0, 1], "k--")
         ax[1].set_xlabel("False Positive Rate")
