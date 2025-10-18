@@ -42,6 +42,13 @@ class LogTransformer(BaseEstimator, TransformerMixin):
             X_transformed[col] = np.log1p(X_transformed[col])
         return X_transformed
 
+    def get_feature_names_out(self, input_features=None):
+        if input_features is None:
+            if getattr(self, "feature_names_in_", None) is not None:
+                return np.asarray(self.feature_names_in_)
+            return np.asarray(self.columns)
+        return np.asarray(input_features)
+
 
 def stratified_split(
     data: pd.DataFrame,
@@ -97,7 +104,7 @@ def get_gaussian_nb_pipeline() -> Pipeline:
                 ["diag_1", "diag_2", "diag_3"],
             ),
             (
-                "race_ordinal",
+                "ordinal",
                 OrdinalEncoder(
                     categories=[
                         [
@@ -215,10 +222,9 @@ def train_gaussian_nb(
     y_proba_test = pipe.predict_proba(X_test)
     y_pred_train = pipe.predict(X_train)
     y_proba_train = pipe.predict_proba(X_train)
-    model = pipe.named_steps["classifier"]
 
     return (
-        model,
+        pipe,
         y_test,
         y_pred_test,
         y_proba_test,
@@ -329,7 +335,7 @@ def cross_validate_gaussian_nb(
         except Exception:
             pass
 
-    return cv_results, y_oof, y_oof_proba
+    return pipe.fit(X, y), cv_results, y_oof, y_oof_proba
 
 
 def evaluate_model(
