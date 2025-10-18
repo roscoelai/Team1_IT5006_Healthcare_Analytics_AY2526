@@ -8,7 +8,12 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
 from sklearn.compose import ColumnTransformer
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import (
+    train_test_split,
+    cross_val_score,
+    cross_val_predict,
+    cross_validate,
+)
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import (
     accuracy_score,
@@ -221,6 +226,110 @@ def train_gaussian_nb(
         y_pred_train,
         y_proba_train,
     )
+
+
+def cross_validate_gaussian_nb(
+    data: pd.DataFrame,
+    features: list[str],
+    target: str,
+    cv: int = 5,
+    scoring: list[str] | str | None = None,
+    n_jobs: int = -1,
+):
+    """Run cross_validate and produce CV train/test summary plus OOF diagnostics.
+
+    Returns:
+        tuple: (cv_results, y_oof, y_oof_proba)
+    """
+    if scoring is None:
+        scoring = [
+            "accuracy",
+            "precision_weighted",
+            "recall_weighted",
+            "f1_weighted",
+            "roc_auc",
+        ]
+
+    X = data[features]
+    y = data[target]
+
+    pipe = get_gaussian_nb_pipeline()
+
+    cv_results = cross_validate(
+        pipe,
+        X,
+        y,
+        cv=cv,
+        scoring=scoring,
+        return_train_score=True,
+        n_jobs=n_jobs,
+    )
+
+    # Print CV summary (mean ± std)
+    print(f"Cross-validation summary (cv={cv}):")
+    scoring_list = scoring if isinstance(scoring, (list, tuple)) else [scoring]
+    for score in scoring_list:
+        test_key = f"test_{score}"
+        train_key = f"train_{score}"
+        if test_key in cv_results:
+            test_mean = np.mean(cv_results[test_key])
+            test_std = np.std(cv_results[test_key])
+            train_mean = (
+                np.mean(cv_results[train_key])
+                if train_key in cv_results
+                else float("nan")
+            )
+            train_std = (
+                np.std(cv_results[train_key])
+                if train_key in cv_results
+                else float("nan")
+            )
+            print(
+                f"{score}: test mean={test_mean:.4f} ± {test_std:.4f}, "
+                f"train mean={train_mean:.4f} ± {train_std:.4f}"
+            )
+
+    # Obtain out-of-fold (OOF) predictions for per-sample diagnostics
+    y_oof = cross_val_predict(pipe, X, y, cv=cv, method="predict", n_jobs=n_jobs)
+    try:
+        y_oof_proba = cross_val_predict(
+            pipe, X, y, cv=cv, method="predict_proba", n_jobs=n_jobs
+        )
+    except Exception:
+        y_oof_proba = None
+
+    print("=== OOF (cross-validated) Classification Report ===")
+    print(classification_report(y, y_oof, zero_division=0))
+
+    # OOF confusion matrix
+    cm = confusion_matrix(y, y_oof)
+    plt.figure(figsize=(6, 4))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
+    plt.title("OOF Confusion Matrix")
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+    plt.tight_layout()
+    plt.show()
+
+    # OOF ROC AUC if probabilities available (binary assumed)
+    if y_oof_proba is not None:
+        try:
+            oof_auc = roc_auc_score(y, y_oof_proba[:, 1])
+            print(f"OOF ROC AUC: {oof_auc:.4f}")
+            fpr, tpr, _ = roc_curve(y, y_oof_proba[:, 1])
+            plt.figure(figsize=(6, 5))
+            plt.plot(fpr, tpr, label=f"OOF ROC (AUC = {oof_auc:.4f})")
+            plt.plot([0, 1], [0, 1], "k--")
+            plt.xlabel("False Positive Rate")
+            plt.ylabel("True Positive Rate")
+            plt.title("OOF ROC Curve")
+            plt.legend(loc="lower right")
+            plt.tight_layout()
+            plt.show()
+        except Exception:
+            pass
+
+    return cv_results, y_oof, y_oof_proba
 
 
 def evaluate_model(
