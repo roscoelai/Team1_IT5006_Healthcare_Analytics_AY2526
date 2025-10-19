@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from imblearn.pipeline import Pipeline as ImbPipeline
+from imblearn.over_sampling import SMOTE
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
@@ -84,7 +86,7 @@ def stratified_split(
     return X_train, X_test, y_train, y_test
 
 
-def get_gaussian_nb_pipeline() -> Pipeline:
+def get_gaussian_nb_pipeline(use_smote: bool = False) -> Pipeline:
     """Get a pipeline with preprocessing and Gaussian Naive Bayes classifier.
 
     Returns:
@@ -186,6 +188,16 @@ def get_gaussian_nb_pipeline() -> Pipeline:
             ("classifier", GaussianNB()),
         ],
     )
+
+    if use_smote:
+        imb_pipe = ImbPipeline(
+            steps=[
+                ("column_transform", column_transform),
+                ("smote", SMOTE(random_state=42)),
+                ("classifier", GaussianNB()),
+            ]
+        )
+        return imb_pipe
 
     return pipe
 
