@@ -259,95 +259,100 @@ def cross_validate_gaussian_nb(
     Returns:
         tuple: (cv_results, y_oof, y_oof_proba)
     """
-    if scoring is None:
-        scoring = [
-            "accuracy",
-            "precision_weighted",
-            "recall_weighted",
-            "f1_weighted",
-            "roc_auc",
-        ]
-
-    X = data[features]
-    y = data[target]
+    X_train, X_test, y_train, y_test = stratified_split(
+        data=data, features=features, target=target, test_size=0.3, random_state=42
+    )
 
     pipe = get_gaussian_nb_pipeline()
 
-    cv_results = cross_validate(
-        pipe,
-        X,
-        y,
-        cv=cv,
-        scoring=scoring,
-        return_train_score=True,
-        n_jobs=n_jobs,
+    # Helper to compute metrics robustly for binary/multiclass and missing proba
+    def compute_metrics(y_true, y_pred, y_proba, class_order: np.ndarray | None = None):
+        metrics = {
+            "accuracy": accuracy_score(y_true, y_pred),
+            "precision_weighted": precision_score(
+                y_true, y_pred, average="weighted", zero_division=0
+            ),
+            "recall_weighted": recall_score(
+                y_true, y_pred, average="weighted", zero_division=0
+            ),
+            "f1_weighted": f1_score(
+                y_true, y_pred, average="weighted", zero_division=0
+            ),
+            "roc_auc": None,
+        }
+
+        if y_proba is None:
+            return metrics
+
+        try:
+            classes = np.unique(y_true) if class_order is None else class_order
+            n_classes = len(classes)
+
+            if n_classes == 2:
+                # Choose positive class: prefer label 1 if present, else the second class
+                pos_label = 1 if 1 in classes else classes[1]
+                pos_idx = list(classes).index(pos_label)
+                metrics["roc_auc"] = roc_auc_score(y_true, y_proba[:, pos_idx])
+            else:
+                # Multiclass AUC
+                metrics["roc_auc"] = roc_auc_score(
+                    y_true, y_proba, multi_class="ovr", average="weighted"
+                )
+        except Exception:
+            metrics["roc_auc"] = None
+
+        return metrics
+
+    # OOF predictions on TRAIN
+    y_oof = cross_val_predict(
+        pipe, X_train, y_train, cv=cv, method="predict", n_jobs=n_jobs
     )
-
-    # Print CV summary (mean ± std)
-    print(f"Cross-validation summary (cv={cv}):")
-    scoring_list = scoring if isinstance(scoring, (list, tuple)) else [scoring]
-    for score in scoring_list:
-        test_key = f"test_{score}"
-        train_key = f"train_{score}"
-        if test_key in cv_results:
-            test_mean = np.mean(cv_results[test_key])
-            test_std = np.std(cv_results[test_key])
-            train_mean = (
-                np.mean(cv_results[train_key])
-                if train_key in cv_results
-                else float("nan")
-            )
-            train_std = (
-                np.std(cv_results[train_key])
-                if train_key in cv_results
-                else float("nan")
-            )
-            print(
-                f"{score}: test mean={test_mean:.4f} ± {test_std:.4f}, "
-                f"train mean={train_mean:.4f} ± {train_std:.4f}"
-            )
-
-    # Obtain out-of-fold (OOF) predictions for per-sample diagnostics
-    y_oof = cross_val_predict(pipe, X, y, cv=cv, method="predict", n_jobs=n_jobs)
     try:
         y_oof_proba = cross_val_predict(
-            pipe, X, y, cv=cv, method="predict_proba", n_jobs=n_jobs
+            pipe, X_train, y_train, cv=cv, method="predict_proba", n_jobs=n_jobs
         )
     except Exception:
         y_oof_proba = None
 
-    print("=== OOF (cross-validated) Classification Report ===")
-    print(classification_report(y, y_oof, zero_division=0))
+    # OOF metrics and report
+    oof_metrics = compute_metrics(y_train, y_oof, y_oof_proba)
+    print("\n=== CV OOF Performance (TRAIN) ===")
+    print(classification_report(y_train, y_oof, zero_division=0))
+    print(
+        f"Accuracy: {oof_metrics['accuracy']:.4f}, "
+        f"Precision_w: {oof_metrics['precision_weighted']:.4f}, "
+        f"Recall_w: {oof_metrics['recall_weighted']:.4f}, "
+        f"F1_w: {oof_metrics['f1_weighted']:.4f}, "
+        f"ROC AUC: {oof_metrics['roc_auc'] if oof_metrics['roc_auc'] is not None else 'N/A'}"
+    )
 
-    # OOF confusion matrix
-    cm = confusion_matrix(y, y_oof)
-    plt.figure(figsize=(6, 4))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
-    plt.title("OOF Confusion Matrix")
-    plt.xlabel("Predicted")
-    plt.ylabel("Actual")
-    plt.tight_layout()
-    plt.show()
+    # Fit on TRAIN and evaluate on held-out TEST
+    fitted_pipe = pipe.fit(X_train, y_train)
+    y_test_pred = fitted_pipe.predict(X_test)
+    try:
+        y_test_proba = fitted_pipe.predict_proba(X_test)
+    except Exception:
+        y_test_proba = None
 
-    # OOF ROC AUC if probabilities available (binary assumed)
-    if y_oof_proba is not None:
-        try:
-            oof_auc = roc_auc_score(y, y_oof_proba[:, 1])
-            print(f"OOF ROC AUC: {oof_auc:.4f}")
-            fpr, tpr, _ = roc_curve(y, y_oof_proba[:, 1])
-            plt.figure(figsize=(6, 5))
-            plt.plot(fpr, tpr, label=f"OOF ROC (AUC = {oof_auc:.4f})")
-            plt.plot([0, 1], [0, 1], "k--")
-            plt.xlabel("False Positive Rate")
-            plt.ylabel("True Positive Rate")
-            plt.title("OOF ROC Curve")
-            plt.legend(loc="lower right")
-            plt.tight_layout()
-            plt.show()
-        except Exception:
-            pass
+    # TEST metrics and report
+    test_metrics = compute_metrics(
+        y_test,
+        y_test_pred,
+        y_test_proba,
+        class_order=getattr(fitted_pipe, "classes_", None),
+    )
+    print("\n=== Held-out TEST Performance ===")
+    print(classification_report(y_test, y_test_pred, zero_division=0))
+    print(
+        f"Accuracy: {test_metrics['accuracy']:.4f}, "
+        f"Precision_w: {test_metrics['precision_weighted']:.4f}, "
+        f"Recall_w: {test_metrics['recall_weighted']:.4f}, "
+        f"F1_w: {test_metrics['f1_weighted']:.4f}, "
+        f"ROC AUC: {test_metrics['roc_auc'] if test_metrics['roc_auc'] is not None else 'N/A'}"
+    )
 
-    return pipe.fit(X, y), cv_results, y_oof, y_oof_proba
+    results = {"oof": oof_metrics, "test": test_metrics}
+    return fitted_pipe, results, y_oof, y_oof_proba, test_metrics
 
 
 def evaluate_model(
