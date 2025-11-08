@@ -10,13 +10,9 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
 from sklearn.compose import ColumnTransformer
-from sklearn.model_selection import (
-    train_test_split,
-    cross_val_score,
-    cross_val_predict,
-    cross_validate,
-)
+from sklearn.model_selection import train_test_split, cross_val_predict
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -86,7 +82,9 @@ def stratified_split(
     return X_train, X_test, y_train, y_test
 
 
-def get_gaussian_nb_pipeline(use_smote: bool = False) -> Pipeline:
+def get_gaussian_nb_pipeline(
+    use_smote: bool = False, polynomial_degree: int = 2
+) -> Pipeline:
     """Get a pipeline with preprocessing and Gaussian Naive Bayes classifier.
 
     Returns:
@@ -176,6 +174,20 @@ def get_gaussian_nb_pipeline(use_smote: bool = False) -> Pipeline:
                     "num_procedures",
                     "num_medications",
                     "number_outpatient",
+                ],
+            ),
+            (
+                "poly_features",
+                PolynomialFeatures(degree=polynomial_degree, include_bias=False),
+                [
+                    "time_in_hospital",
+                    "num_lab_procedures",
+                    "num_procedures",
+                    "num_medications",
+                    "number_outpatient",
+                    "number_emergency",
+                    "number_inpatient",
+                    "number_diagnoses",
                 ],
             ),
         ],

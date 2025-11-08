@@ -20,7 +20,10 @@ Example:
 """
 
 import os
+from itertools import combinations
+
 import pandas as pd
+from sklearn.preprocessing import PolynomialFeatures
 
 
 def load_data(input_path: str) -> pd.DataFrame:
@@ -59,6 +62,134 @@ def replace_missing(
     """
     print(f"=== Replacing missing values in column: {column} with {replace_value} ===")
     data.fillna(value=replace_value, inplace=True)
+    return data
+
+
+def create_interaction_term(
+    data: pd.DataFrame,
+    column1: str,
+    column2: str,
+    new_column: str,
+) -> pd.DataFrame:
+    """Create an interaction term between two specified columns.
+
+    Args:
+        data (pd.DataFrame): Input DataFrame.
+        column1 (str): First column name.
+        column2 (str): Second column name.
+        new_column (str): Name of the new interaction term column.
+    Returns:
+        pd.DataFrame: DataFrame with the new interaction term column added.
+    """
+    print(f"=== Creating interaction term: {new_column} = {column1} * {column2} ===")
+    if column1 in data.columns and column2 in data.columns:
+        data[new_column] = data[column1] * data[column2]
+        print(f"Interaction term '{new_column}' created.")
+    else:
+        print(
+            f"[WARNING] One or both columns '{column1}', '{column2}' do not exist in the DataFrame."
+        )
+    return data
+
+
+def number_of_encounters(data: pd.DataFrame) -> pd.DataFrame:
+    """Create a new feature representing the number of encounters per patient.
+
+    Args:
+        data (pd.DataFrame): Input DataFrame.
+    Returns:
+        pd.DataFrame: DataFrame with the new 'num_encounters' column added.
+    """
+    print("=== Creating 'num_encounters' feature ===")
+    encounter_counts = data["patient_nbr"].value_counts()
+    data["num_encounters"] = data["patient_nbr"].map(encounter_counts)
+    print("'num_encounters' feature created.")
+    return data
+
+
+def polynomial_feature_expansion_categorical(
+    data: pd.DataFrame,
+    columns: list,
+    degree: int,
+    separator: str = " ",
+    max_cardinality: int = 1000,
+) -> pd.DataFrame:
+    """Generate polynomial and interaction features for specified categorical columns."""
+
+    print(
+        f"=== Generating polynomial features for categorical columns: {columns} with degree {degree} ==="
+    )
+
+    for values in combinations(range(len(columns)), degree):
+        new_col_name = separator.join([columns[i] for i in values])
+
+        # Check cardinality
+        cardinality = data.groupby(list(columns[i] for i in values)).ngroups
+        if cardinality > max_cardinality:
+            print(
+                f"[WARNING] Skipping combination {new_col_name} due to high cardinality: {cardinality}"
+            )
+            continue
+        data[new_col_name] = data.apply(
+            lambda row: separator.join([str(row[columns[i]]) for i in values]), axis=1
+        )
+        print(f"Created new categorical interaction feature: {new_col_name}")
+
+    print(f"Polynomial categorical features added. New shape: {data.shape}")
+    return data
+
+
+def polynomial_feature_expansion(
+    data: pd.DataFrame,
+    columns: list,
+    degree: int,
+    interaction_only: bool = True,
+    include_bias: bool = False,
+) -> pd.DataFrame:
+    """Generate polynomial and interaction features for specified columns.
+
+    Args:
+        data (pd.DataFrame): Input DataFrame.
+        columns (list): List of column names to generate polynomial features for.
+        degree (int): Degree of the polynomial features.
+        interaction_only (bool): If True, only interaction features are produced.
+        include_bias (bool): If True, include a bias column (all ones).
+    Returns:
+        pd.DataFrame: DataFrame with polynomial and interaction features added.
+    """
+
+    print(
+        f"=== Generating polynomial features for columns: {columns} with degree {degree} ==="
+    )
+
+    # Extract the specified columns
+    feature_data = data[columns]
+
+    # Initialize PolynomialFeatures
+    poly = PolynomialFeatures(
+        degree=degree,
+        interaction_only=interaction_only,
+        include_bias=include_bias,
+    )
+
+    # Fit and transform the data to generate polynomial features
+    poly_features = poly.fit_transform(feature_data)
+
+    # Get feature names
+    feature_names = poly.get_feature_names_out(columns)
+
+    # Create a DataFrame for the polynomial features
+    poly_df = pd.DataFrame(poly_features, columns=feature_names)
+
+    # Drop the original columns to avoid duplication
+    data = data.drop(columns=columns)
+
+    # Concatenate the original DataFrame with the new polynomial features
+    data = pd.concat(
+        [data.reset_index(drop=True), poly_df.reset_index(drop=True)], axis=1
+    )
+
+    print(f"Polynomial features added. New shape: {data.shape}")
     return data
 
 
