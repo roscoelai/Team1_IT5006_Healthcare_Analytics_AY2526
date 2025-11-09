@@ -93,17 +93,17 @@ def create_interaction_term(
 
 
 def number_of_encounters(data: pd.DataFrame) -> pd.DataFrame:
-    """Create a new feature representing the number of encounters per patient.
+    """Create a new feature representing the number of past encounters per patient.
 
     Args:
         data (pd.DataFrame): Input DataFrame.
     Returns:
-        pd.DataFrame: DataFrame with the new 'num_encounters' column added.
+        pd.DataFrame: DataFrame with the new 'past_encounters' column added.
     """
-    print("=== Creating 'num_encounters' feature ===")
-    encounter_counts = data["patient_nbr"].value_counts()
-    data["num_encounters"] = data["patient_nbr"].map(encounter_counts)
-    print("'num_encounters' feature created.")
+    print("=== Creating 'past_encounters' feature ===")
+    data = data.sort_values(by=["patient_nbr", "encounter_id"])
+    data["past_encounters"] = data.groupby("patient_nbr").cumcount()
+
     return data
 
 
